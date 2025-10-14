@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<VBox alignment="CENTER" spacing="20" prefWidth="400" prefHeight="500"
+      styleClass="root-container" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.demo.game.controllers.LoginController">
+
+    <padding>
+        <Insets top="50" right="50" bottom="50" left="50"/>
+    </padding>
+
+    <Label text="Hot Potato Arena" styleClass="title">
+        <font>
+            <Font size="32.0"/>
+        </font>
+    </Label>
+
+    <VBox spacing="10" alignment="CENTER">
+        <Label text="Username" styleClass="label"/>
+        <TextField fx:id="usernameField" promptText="Enter username" maxWidth="250"/>
+
+        <Label text="Password" styleClass="label"/>
+        <PasswordField fx:id="passwordField" promptText="Enter password" maxWidth="250"/>
+
+        <Label fx:id="errorLabel" styleClass="error-label" visible="false"/>
+    </VBox>
+
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="loginButton" text="Login" onAction="#handleLogin"
+                styleClass="primary-button" prefWidth="100"/>
+        <Button fx:id="registerButton" text="Register" onAction="#handleRegister"
+                styleClass="secondary-button" prefWidth="100"/>
+    </HBox>
+</VBox>

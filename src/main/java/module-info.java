@@ -12,6 +12,7 @@ open module com.demo.game {
     requires com.almasb.fxgl.all;
     requires java.sql;
     requires jbcrypt;
+    requires java.desktop;
 
     exports com.demo.game;
 }

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<ScrollPane fitToWidth="true" fitToHeight="true" styleClass="scroll-pane"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.demo.game.controllers.RegisterController">
+    <VBox alignment="CENTER" spacing="15" prefWidth="500" styleClass="root-container">
+        <padding>
+            <Insets top="40" right="50" bottom="40" left="50"/>
+        </padding>
+
+        <Label text="Create Account" styleClass="title">
+            <font>
+                <Font size="32.0"/>
+            </font>
+        </Label>
+
+        <Label text="Join Hot Potato Arena" styleClass="subtitle"/>
+
+        <VBox spacing="12" alignment="CENTER" maxWidth="300">
+            <!-- Username Field -->
+            <VBox spacing="5">
+                <Label text="Username" styleClass="field-label"/>
+                <TextField fx:id="usernameField" promptText="3-20 characters"
+                           styleClass="text-field-custom" maxWidth="300"/>
+            </VBox>
+
+            <!-- Email Field -->
+            <VBox spacing="5">
+                <Label text="Email" styleClass="field-label"/>
+                <TextField fx:id="emailField" promptText="your@email.com"
+                           styleClass="text-field-custom" maxWidth="300"/>
+            </VBox>
+
+            <!-- Password Field -->
+            <VBox spacing="5">
+                <Label text="Password" styleClass="field-label"/>
+                <PasswordField fx:id="passwordField" promptText="Min 6 characters"
+                               styleClass="text-field-custom" maxWidth="300"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <ProgressBar fx:id="passwordStrengthBar" prefWidth="200" prefHeight="5"/>
+                    <Label fx:id="passwordStrengthLabel" styleClass="strength-label"/>
+                </HBox>
+            </VBox>
+
+            <!-- Confirm Password Field -->
+            <VBox spacing="5">
+                <Label text="Confirm Password" styleClass="field-label"/>
+                <PasswordField fx:id="confirmPasswordField" promptText="Re-enter password"
+                               styleClass="text-field-custom" maxWidth="300"/>
+            </VBox>
+
+            <!-- Terms Checkbox -->
+            <CheckBox fx:id="termsCheckBox" text="I agree to the Terms of Service"
+                      styleClass="checkbox-custom" wrapText="true"/>
+
+            <!-- Messages -->
+            <Label fx:id="errorLabel" styleClass="error-label" visible="false" wrapText="true"/>
+            <Label fx:id="successLabel" styleClass="success-label" visible="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Buttons -->
+        <HBox spacing="15" alignment="CENTER">
+            <Button fx:id="registerButton" text="Register" onAction="#handleRegister"
+                    styleClass="primary-button" prefWidth="120"/>
+            <Button fx:id="backButton" text="Back to Login" onAction="#handleBack"
+                    styleClass="secondary-button" prefWidth="120"/>
+        </HBox>
+    </VBox>
+</ScrollPane>

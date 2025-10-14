@@ -2,6 +2,8 @@ package com.demo.game;
 
 import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.app.scene.FXGLMenu;
+import com.almasb.fxgl.app.scene.SceneFactory;
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.SpawnData;
@@ -9,14 +11,22 @@ import com.almasb.fxgl.input.Input;
 import com.almasb.fxgl.input.UserAction;
 import com.almasb.fxgl.physics.CollisionHandler;
 import com.demo.game.components.PlayerComponent;
+import com.demo.game.database.DatabaseConnection;
+import com.demo.game.database.UserDAO;
 import com.demo.game.events.BombExplodedEvent;
 import com.demo.game.factories.AIFactory;
 import com.demo.game.factories.BombFactory;
 import com.demo.game.factories.PlayerFactory;
 import com.demo.game.factories.WallFactory;
+import com.demo.game.scenes.LoginScene;
+import com.demo.game.ui.SceneManager;
+import javafx.application.Platform;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import com.almasb.fxgl.app.scene.SceneFactory;
+import com.demo.game.scenes.MainMenuScene;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +39,9 @@ public class GameApp extends GameApplication {
     private Entity player;
     private PlayerComponent playerComponent;
     private Entity bomb;
+
+
+
     @Override
     protected void initSettings(GameSettings settings) {
         settings.setTitle(GAME_TITLE);
@@ -37,6 +50,37 @@ public class GameApp extends GameApplication {
         settings.setVersion(GAME_VERSION);
         settings.setManualResizeEnabled(true);
         settings.setPreserveResizeRatio(true);
+        settings.setMainMenuEnabled(true);
+
+        settings.setSceneFactory(new SceneFactory() {
+            @Override
+            public FXGLMenu newMainMenu() {
+                // When FXGL needs a main menu, it will now create ours.
+                return new LoginScene();
+            }
+        });
+    }
+
+    private void returnToMainMenu() {
+        // Save score before returning
+        if (SceneManager.getInstance().getCurrentUser() != null) {
+            UserDAO userDAO = new UserDAO();
+            userDAO.updateHighScore(
+                    SceneManager.getInstance().getCurrentUser().getId(),
+                    FXGL.geti("score")
+            );
+        }
+
+        // Close FXGL and return to JavaFX menu
+        FXGL.getGameController().exit();
+        SceneManager.getInstance().setGameRunning(false);  // Update game state
+
+        // Show the main menu stage
+        Platform.runLater(() -> {
+            Stage mainStage = SceneManager.getInstance().getStage();
+            mainStage.show();
+            SceneManager.getInstance().showMainMenu();
+        });
     }
 
     @Override
@@ -53,40 +97,73 @@ public class GameApp extends GameApplication {
 
         FXGL.getInput().addAction(new UserAction("Move Left") {
             @Override
-            protected void onAction() { playerComponent.moveLeft(); }
+            protected void onAction() {
+                playerComponent.moveLeft();
+            }
+
             @Override
-            protected void onActionEnd() { playerComponent.stopMovingX(); }
+            protected void onActionEnd() {
+                playerComponent.stopMovingX();
+            }
         }, KeyCode.A);
 
         FXGL.getInput().addAction(new UserAction("Move Right") {
             @Override
-            protected void onAction() { playerComponent.moveRight(); }
+            protected void onAction() {
+                playerComponent.moveRight();
+            }
+
             @Override
-            protected void onActionEnd() { playerComponent.stopMovingX(); }
+            protected void onActionEnd() {
+                playerComponent.stopMovingX();
+            }
         }, KeyCode.D);
 
         FXGL.getInput().addAction(new UserAction("Move Up") {
             @Override
-            protected void onAction() { playerComponent.moveUp(); }
+            protected void onAction() {
+                playerComponent.moveUp();
+            }
+
             @Override
-            protected void onActionEnd() { playerComponent.stopMovingY(); }
+            protected void onActionEnd() {
+                playerComponent.stopMovingY();
+            }
         }, KeyCode.W);
 
         FXGL.getInput().addAction(new UserAction("Move Down") {
             @Override
-            protected void onAction() { playerComponent.moveDown(); }
+            protected void onAction() {
+                playerComponent.moveDown();
+            }
+
             @Override
-            protected void onActionEnd() { playerComponent.stopMovingY(); }
+            protected void onActionEnd() {
+                playerComponent.stopMovingY();
+            }
         }, KeyCode.S);
 
         FXGL.getInput().addAction(new UserAction("Pass Bomb") {
             @Override
-            protected void onActionBegin() { playerComponent.passBomb(); }
+            protected void onActionBegin() {
+                playerComponent.passBomb();
+            }
         }, KeyCode.SPACE);
     }
 
     @Override
     protected void initGame() {
+        // Get the main application window (the Stage)
+        Stage stage = FXGL.getPrimaryStage();
+
+        // This is the core of the solution.
+        // We are adding an event handler that runs when the user
+        // clicks the window's 'X' (close) button.
+        stage.setOnCloseRequest(event -> {
+            System.out.println("Window close request received. Disconnecting database...");
+            DatabaseConnection.getInstance().disconnect();
+        });
+
         FXGL.getGameWorld().addEntityFactory(new PlayerFactory());
         FXGL.getGameWorld().addEntityFactory(new AIFactory());
         FXGL.getGameWorld().addEntityFactory(new BombFactory());

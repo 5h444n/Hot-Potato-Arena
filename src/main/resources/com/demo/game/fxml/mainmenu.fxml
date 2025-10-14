@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<VBox alignment="CENTER" spacing="25" prefWidth="600" prefHeight="700"
+      styleClass="root-container" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.demo.game.controllers.MainMenuController">
+
+    <padding>
+        <Insets top="50" right="50" bottom="50" left="50"/>
+    </padding>
+
+    <Label text="Hot Potato Arena" styleClass="game-title">
+        <font>
+            <Font size="48.0"/>
+        </font>
+    </Label>
+
+    <Label fx:id="welcomeLabel" styleClass="welcome-label">
+        <font>
+            <Font size="18.0"/>
+        </font>
+    </Label>
+
+    <Label fx:id="highScoreLabel" styleClass="score-label">
+        <font>
+            <Font size="16.0"/>
+        </font>
+    </Label>
+
+    <VBox spacing="15" alignment="CENTER" maxWidth="300">
+        <Button fx:id="singlePlayerButton" text="Single Player"
+                onAction="#handleSinglePlayer" styleClass="menu-button" prefWidth="250"/>
+
+        <Button fx:id="multiplayerButton" text="Multiplayer"
+                onAction="#handleMultiplayer" styleClass="menu-button" prefWidth="250"/>
+
+        <Button fx:id="settingsButton" text="Settings"
+                onAction="#handleSettings" styleClass="menu-button" prefWidth="250"/>
+
+        <Button fx:id="creditsButton" text="Credits"
+                onAction="#handleCredits" styleClass="menu-button" prefWidth="250"/>
+
+        <Button fx:id="quitButton" text="Quit"
+                onAction="#handleQuit" styleClass="quit-button" prefWidth="250"/>
+    </VBox>
+</VBox>

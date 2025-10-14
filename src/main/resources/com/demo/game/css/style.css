@@ -1,0 +1,79 @@
+.root-container {
+    -fx-background-color: linear-gradient(to bottom, #2C3E50, #34495E);
+}
+
+.title, .game-title {
+    -fx-text-fill: #ECF0F1;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 10, 0, 0, 5);
+}
+
+.label {
+    -fx-text-fill: #BDC3C7;
+    -fx-font-size: 14px;
+}
+
+.welcome-label {
+    -fx-text-fill: #3498DB;
+}
+
+.score-label {
+    -fx-text-fill: #F39C12;
+}
+
+.error-label {
+    -fx-text-fill: #E74C3C;
+    -fx-font-size: 12px;
+}
+
+.text-field, .password-field {
+    -fx-background-color: #34495E;
+    -fx-text-fill: #ECF0F1;
+    -fx-border-color: #3498DB;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 8;
+}
+
+.primary-button, .menu-button {
+    -fx-background-color: #3498DB;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-background-radius: 5;
+}
+
+.primary-button:hover, .menu-button:hover {
+    -fx-background-color: #2980B9;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.secondary-button {
+    -fx-background-color: #95A5A6;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-background-radius: 5;
+}
+
+.secondary-button:hover {
+    -fx-background-color: #7F8C8D;
+}
+
+.quit-button {
+    -fx-background-color: #E74C3C;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-background-radius: 5;
+}
+
+.quit-button:hover {
+    -fx-background-color: #C0392B;
+}
