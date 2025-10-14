@@ -41,27 +41,31 @@ public class PlayerComponent extends Component {
         physicsComponent.setVelocityX(-Config.PLAYER_SPEED);
         lastDirection = new Point2D(-1, 0); // Update facing direction
     }
+
     public void moveRight() {
         physicsComponent.setVelocityX(Config.PLAYER_SPEED);
         lastDirection = new Point2D(1, 0); // Update facing direction
     }
+
     public void moveUp() {
         physicsComponent.setVelocityY(-Config.PLAYER_SPEED);
         lastDirection = new Point2D(0, -1); // Update facing direction
     }
+
     public void moveDown() {
         physicsComponent.setVelocityY(Config.PLAYER_SPEED);
         lastDirection = new Point2D(0, 1); // Update facing direction
     }
+
     public void stopMovingX() {
         physicsComponent.setVelocityX(0);
     }
+
     public void stopMovingY() {
         physicsComponent.setVelocityY(0);
     }
 
-    public void receiveBomb(Entity bomb)
-    {
+    public void receiveBomb(Entity bomb) {
         this.hasBomb = true;
         this.bombEntity = bomb;
         bomb.getComponent(BombComponent.class).startTimer();
@@ -74,23 +78,23 @@ public class PlayerComponent extends Component {
     }
 
     public void passBomb() {
-        if(hasBomb && passCoolDownTimer.elapsed(PASS_COOLDOWN)) {
-            // bomb passing logic
-            FXGL.getGameWorld().getSingletonOptional(EntityType.AI).ifPresent(ai -> {
-                // Check if the AI is within passing range
-                if (entity.distance(ai) <= Config.PASS_RANGE) {
-                    // Transfer the bomb
-                    this.hasBomb = false;
-                    //un- attach the bomb
-                    bombEntity.xProperty().unbind();
+        if (hasBomb && passCoolDownTimer.elapsed(PASS_COOLDOWN)) {
+            // Find the closest AI that is within passing range
+            FXGL.getGameWorld()
+                    .getClosestEntity(entity, e -> e.isType(EntityType.AI))
+                    .ifPresent(closestAI -> {
+                        if (entity.distance(closestAI) <= Config.PASS_RANGE) {
+                            // Transfer the bomb
+                            this.hasBomb = false;
+                            bombEntity.xProperty().unbind();
 
-                    // Give bomb to AI
-                    ai.getComponent(AIComponent.class).receiveBomb(bombEntity);
+                            // Give bomb to the closest AI
+                            closestAI.getComponent(AIComponent.class).receiveBomb(bombEntity);
 
-                    //FXGL.play("pass.wav");
-                    passCoolDownTimer.capture();
-                }
-            });
+                            FXGL.play("pass.wav");
+                            passCoolDownTimer.capture();
+                        }
+                    });
         }
     }
 

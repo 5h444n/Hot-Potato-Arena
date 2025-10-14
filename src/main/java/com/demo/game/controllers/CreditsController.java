@@ -1,11 +1,14 @@
 package com.demo.game.controllers;
 
+import com.almasb.fxgl.dsl.FXGL;
 import com.demo.game.ui.SceneManager;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
@@ -13,6 +16,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.io.IOException;
 import java.net.URI;
 import java.awt.Desktop;
 
@@ -106,7 +110,17 @@ public class CreditsController {
         if (isAutoScrolling) {
             stopAutoScroll();
         }
-        SceneManager.getInstance().showMainMenu();
+        // Switch the view back to the main menu
+        switchToView("/com/demo/game/fxml/mainmenu.fxml");
+    }
+
+    private void switchToView(String fxmlFile) {
+        try {
+            Parent newRoot = FXMLLoader.load(getClass().getResource(fxmlFile));
+            FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+        } catch (IOException e) {
+            System.err.println("Failed to switch view: " + e.getMessage());
+        }
     }
 
     private void addHoverEffects() {

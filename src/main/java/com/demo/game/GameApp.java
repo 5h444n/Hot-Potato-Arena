@@ -10,6 +10,7 @@ import com.almasb.fxgl.entity.SpawnData;
 import com.almasb.fxgl.input.Input;
 import com.almasb.fxgl.input.UserAction;
 import com.almasb.fxgl.physics.CollisionHandler;
+import com.demo.game.components.AIComponent;
 import com.demo.game.components.PlayerComponent;
 import com.demo.game.database.DatabaseConnection;
 import com.demo.game.database.UserDAO;
@@ -18,6 +19,7 @@ import com.demo.game.factories.AIFactory;
 import com.demo.game.factories.BombFactory;
 import com.demo.game.factories.PlayerFactory;
 import com.demo.game.factories.WallFactory;
+import com.demo.game.models.User;
 import com.demo.game.scenes.LoginScene;
 import com.demo.game.ui.SceneManager;
 import javafx.application.Platform;
@@ -39,6 +41,8 @@ public class GameApp extends GameApplication {
     private Entity player;
     private PlayerComponent playerComponent;
     private Entity bomb;
+    private List<Entity> activeAIs = new ArrayList<>();
+
 
 
 
@@ -61,27 +65,27 @@ public class GameApp extends GameApplication {
         });
     }
 
-    private void returnToMainMenu() {
-        // Save score before returning
-        if (SceneManager.getInstance().getCurrentUser() != null) {
-            UserDAO userDAO = new UserDAO();
-            userDAO.updateHighScore(
-                    SceneManager.getInstance().getCurrentUser().getId(),
-                    FXGL.geti("score")
-            );
-        }
-
-        // Close FXGL and return to JavaFX menu
-        FXGL.getGameController().exit();
-        SceneManager.getInstance().setGameRunning(false);  // Update game state
-
-        // Show the main menu stage
-        Platform.runLater(() -> {
-            Stage mainStage = SceneManager.getInstance().getStage();
-            mainStage.show();
-            SceneManager.getInstance().showMainMenu();
-        });
-    }
+//    private void returnToMainMenu() {
+//        // Save score before returning
+//        if (SceneManager.getInstance().getCurrentUser() != null) {
+//            UserDAO userDAO = new UserDAO();
+//            userDAO.updateHighScore(
+//                    SceneManager.getInstance().getCurrentUser().getId(),
+//                    FXGL.geti("score")
+//            );
+//        }
+//
+//        // Close FXGL and return to JavaFX menu
+//        FXGL.getGameController().exit();
+//        SceneManager.getInstance().setGameRunning(false);  // Update game state
+//
+//        // Show the main menu stage
+//        Platform.runLater(() -> {
+//            Stage mainStage = SceneManager.getInstance().getStage();
+//            mainStage.show();
+//            SceneManager.getInstance().showMainMenu();
+//        });
+//    }
 
     @Override
     protected void initGameVars(Map<String, Object> vars) {
@@ -182,7 +186,7 @@ public class GameApp extends GameApplication {
         if (eliminated == null) return;
 
         if (eliminated.isType(EntityType.AI)) {
-            handleAIElimination();
+            handleAIElimination(eliminated); // Pass the AI entity
         } else if (eliminated.isType(EntityType.PLAYER)) {
             handlePlayerElimination();
         }
@@ -191,39 +195,65 @@ public class GameApp extends GameApplication {
     private void handlePlayerElimination() {
         FXGL.inc("lives", -1);
         if (FXGL.geti("lives") <= 0) {
-            endMatch("The AI"); // Player loses the game
+            endGame(false); // Player loses the game
         } else {
             FXGL.getDialogService().showMessageBox("You lost a life! Get ready...", this::startNewRound);
         }
     }
 
-    private void handleAIElimination() {
-        FXGL.inc("score", 100 * FXGL.geti("level")); // More points for higher levels
-        int currentLevel = FXGL.geti("level");
+    private void handleAIElimination(Entity eliminatedAI) {
+        FXGL.inc("score", 100 * FXGL.geti("level"));
+        activeAIs.remove(eliminatedAI); // Remove the defeated AI from our list
 
-        if (currentLevel >= MAX_LEVELS) {
-            endMatch("Player 1"); // Player wins the game
+        // Check if the level is cleared
+        if (activeAIs.isEmpty()) {
+            nextLevel();
         } else {
-            // Proceed to the next level
+            // If there are still AIs left, start a new round in the same level
+            startNewRound();
+        }
+    }
+
+    private void nextLevel() {
+        int currentLevel = FXGL.geti("level");
+        int nextLevelNum = currentLevel + 1;
+
+        if (nextLevelNum > MAX_LEVELS) {
+            endGame(true); // Player has won the entire game
+        } else {
             FXGL.getDialogService().showMessageBox("Level " + currentLevel + " Cleared!", () -> {
-                loadArena(currentLevel + 1);
+                FXGL.set("level", nextLevelNum);
+                loadArena(nextLevelNum);
             });
         }
     }
 
-    private void endMatch(String winnerName) {
-        // Save the player's score at the end of the match
-        //leaderboardService.addScore("Player 1", FXGL.geti("score"));
-        // Clear the game world of all entities
-        List<Entity> entitiesToRemove = new ArrayList<>(FXGL.getGameWorld().getEntities());
-        entitiesToRemove.forEach(Entity::removeFromWorld);
-        // Show the end screen
-//        EndScreen endScreen = sceneFactory.newEndScreen(winnerName);
-//        FXGL.getSceneService().pushSubScene(endScreen);
+    private void endGame(boolean playerWon) {
+        String message;
+        if (playerWon) {
+            message = String.format("Congratulations! You beat all levels!\n\nFinal Score: %d", FXGL.geti("score"));
+
+            // Save the score to the database
+            User currentUser = SceneManager.getInstance().getCurrentUser();
+            if (currentUser != null) {
+                UserDAO userDAO = new UserDAO();
+                userDAO.updateHighScore(currentUser.getId(), FXGL.geti("score"));
+                System.out.println("High score updated for user: " + currentUser.getUsername());
+            }
+
+        } else {
+            message = String.format("Game Over!\n\nFinal Score: %d", FXGL.geti("score"));
+        }
+
+        FXGL.getDialogService().showMessageBox(message, () -> {
+            // Go back to the main menu
+            FXGL.getGameController().gotoMainMenu();
+        });
     }
 
     private void loadArena(int levelNum) {
         FXGL.getGameWorld().getEntitiesCopy().forEach(Entity::removeFromWorld);
+        activeAIs.clear(); // Clear the list of AIs from the previous level
 
         // Load the arena from the tiled map
 
@@ -238,19 +268,59 @@ public class GameApp extends GameApplication {
         }
 
         // Spawn player and AI
-        player = FXGL.spawn("player", FXGL.getAppWidth() / 2, 500);
+        player = FXGL.spawn("player", FXGL.random(WALL_SIZE, SCREEN_WIDTH - WALL_SIZE * 2), FXGL.random(WALL_SIZE, SCREEN_HEIGHT - WALL_SIZE * 2));
         playerComponent = player.getComponent(PlayerComponent.class);
 
-        double aiSpeed = AI_SPEEDS.get(levelNum - 1);
-        FXGL.spawn("ai", new SpawnData(FXGL.getAppWidth() / 2, FXGL.getAppHeight() / 2).put("speed", aiSpeed));
+        int numAIs;
+        double aiSpeed;
+
+        switch (levelNum) {
+            case 1:
+                numAIs = 3;
+                aiSpeed = AI_SPEEDS.get(0); // Easy speed
+                break;
+            case 2:
+                numAIs = 4;
+                aiSpeed = AI_SPEEDS.get(1); // Medium speed
+                break;
+            case 3:
+                numAIs = 5;
+                aiSpeed = AI_SPEEDS.get(2); // Hard speed
+                break;
+            default:
+                // This case handles winning the game
+                endGame(true);
+                return;
+        }
+
+        for (int i = 0; i < numAIs; i++) {
+            Entity ai = FXGL.spawn("ai",
+                    new SpawnData(FXGL.random(WALL_SIZE, SCREEN_WIDTH - WALL_SIZE * 2), FXGL.random(WALL_SIZE, SCREEN_HEIGHT - WALL_SIZE * 2))
+                            .put("speed", aiSpeed)
+            );
+            activeAIs.add(ai);
+        }
 
         startNewRound();
     }
 
     private void startNewRound() {
         playerComponent.respawn();
+
+        // ✅ Create a list of all potential bomb holders
+        List<Entity> potentialHolders = new ArrayList<>(activeAIs);
+        potentialHolders.add(player);
+
+        // ✅ Pick a random entity to receive the bomb
+        Entity bombHolder = potentialHolders.get(FXGL.random(0, potentialHolders.size() - 1));
         Entity bomb = FXGL.spawn("bomb", 0, 0);
-        playerComponent.receiveBomb(bomb);
+
+
+        if (bombHolder.isType(EntityType.PLAYER)) {
+            bombHolder.getComponent(PlayerComponent.class).receiveBomb(bomb);
+        } else {
+            bombHolder.getComponent(AIComponent.class).receiveBomb(bomb);
+        }
     }
 
     @Override

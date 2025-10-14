@@ -21,7 +21,7 @@ public class Config {
     public static final double PLAYER_SPEED = 200.0; // pixels per second
     public static final int PLAYER_SIZE = 40;
     public static final int BOMB_SIZE = 20;
-    public static final int WALL_SIZE = 40;
+    public static final int WALL_SIZE = 20;
 
     public static final Duration PASS_COOLDOWN= Duration.seconds(1.5);
     public static final double PASS_RANGE = 50.0; // The distance the pass effect travels

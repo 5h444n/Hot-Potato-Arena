@@ -5,9 +5,13 @@ import com.demo.game.database.DatabaseConnection;
 import com.demo.game.models.User;
 import com.demo.game.ui.SceneManager;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+
+import java.io.IOException;
 
 public class MainMenuController {
     @FXML private Label welcomeLabel;
@@ -46,12 +50,21 @@ public class MainMenuController {
 
     @FXML
     private void handleSettings() {
-        SceneManager.getInstance().showSettings();
+        switchToView("/com/demo/game/fxml/settings.fxml");
     }
 
     @FXML
     private void handleCredits() {
-        SceneManager.getInstance().showCredits();
+        switchToView("/com/demo/game/fxml/credits.fxml");
+    }
+
+    private void switchToView(String fxmlFile) {
+        try {
+            Parent newRoot = FXMLLoader.load(getClass().getResource(fxmlFile));
+            FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+        } catch (IOException e) {
+            System.err.println("Failed to switch view: " + e.getMessage());
+        }
     }
 
     @FXML

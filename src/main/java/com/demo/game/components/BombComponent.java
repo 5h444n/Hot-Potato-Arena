@@ -47,7 +47,6 @@ public class BombComponent extends Component {
     }
 
     private void explode() {
-        System.out.println("Bomb exploded and removed from world.");
         isTicking = false;
 //        FXGL.play("explosion.wav");
 //        FXGL.spawn("explosion", entity.getCenter().subtract(32, 32));

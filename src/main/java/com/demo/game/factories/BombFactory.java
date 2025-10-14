@@ -14,7 +14,6 @@ public class BombFactory implements EntityFactory {
 
     @Spawns("bomb")
     public Entity newBomb(SpawnData data) {
-        System.out.println("Bomb exploded and removed from world.");
         return FXGL.entityBuilder(data)
                 .type(EntityType.BOMB)
                 .viewWithBBox(FXGL.texture("bomb.png", BOMB_SIZE, BOMB_SIZE))

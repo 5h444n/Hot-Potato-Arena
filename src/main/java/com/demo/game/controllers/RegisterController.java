@@ -80,7 +80,7 @@ public class RegisterController {
             javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
                     javafx.util.Duration.seconds(2)
             );
-            pause.setOnFinished(e -> SceneManager.getInstance().showLogin());
+            pause.setOnFinished(e -> switchToView("/com/demo/game/fxml/login.fxml"));
             pause.play();
         } else {
             showError("Registration failed. Username or email may already exist.");

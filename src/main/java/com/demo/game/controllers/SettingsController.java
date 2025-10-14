@@ -1,12 +1,16 @@
 package com.demo.game.controllers;
 
+import com.almasb.fxgl.dsl.FXGL;
 import com.demo.game.database.DatabaseConnection;
 import com.demo.game.models.User;
 import com.demo.game.ui.SceneManager;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -219,7 +223,16 @@ public class SettingsController {
 
     @FXML
     private void handleBack() {
-        SceneManager.getInstance().showMainMenu();
+        switchToView("/com/demo/game/fxml/mainmenu.fxml");
+    }
+
+    private void switchToView(String fxmlFile) {
+        try {
+            Parent newRoot = FXMLLoader.load(getClass().getResource(fxmlFile));
+            FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+        } catch (IOException e) {
+            System.err.println("Failed to switch view: " + e.getMessage());
+        }
     }
 
     private void showStatus(String message, String type) {

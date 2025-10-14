@@ -8,6 +8,7 @@ import com.almasb.fxgl.entity.Spawns;
 import com.almasb.fxgl.physics.BoundingShape;
 import com.almasb.fxgl.physics.HitBox;
 import com.almasb.fxgl.physics.PhysicsComponent;
+import com.demo.game.Config;
 import com.demo.game.EntityType;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -18,9 +19,10 @@ public class WallFactory implements EntityFactory {
     public Entity newWall(SpawnData data) {
         return FXGL.entityBuilder(data)
                 .type(EntityType.WALL)
-                .bbox(new HitBox(BoundingShape.box(30, 30)))
+                // Use the constant from your Config file
+                .bbox(new HitBox(BoundingShape.box(Config.WALL_SIZE, Config.WALL_SIZE)))
                 .with(new PhysicsComponent())
-                .viewWithBBox(new Rectangle(30, 30, Color.GRAY))
+                .viewWithBBox(new Rectangle(Config.WALL_SIZE, Config.WALL_SIZE, Color.GRAY))
                 .build();
     }
 }

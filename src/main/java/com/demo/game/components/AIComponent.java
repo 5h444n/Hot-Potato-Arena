@@ -49,32 +49,52 @@ public class AIComponent extends Component {
         Entity player = playerOpt.get();
         boolean playerHasBomb = player.getComponent(PlayerComponent.class).hasBomb();
 
-        if (this.hasBomb) {
-            // STATE: ATTACKING (Move towards player AND try to pass)
-           // Vec2 moveDirection = player.getCenter().subtract(entity.getCenter()).normalize();
-            Vec2 moveDirection = new Vec2(player.getCenter().getX() - entity.getCenter().getX(), player.getCenter().getY() - entity.getCenter().getY()).normalize();
-            physics.setLinearVelocity(moveDirection.mul(speed).toPoint2D());
+        if (hasBomb) {
+            // STATE: ATTACKING - Find the nearest target and move towards it.
+            findNearestTarget().ifPresent(target -> {
+                Point2D moveDirection = target.getCenter().subtract(entity.getCenter()).normalize();
+                physics.setLinearVelocity(moveDirection.multiply(speed));
 
-            // --- NEW PASS LOGIC ---
-            // Check if player is in range and cooldown is over
-            if (entity.distance(player) <= Config.PASS_RANGE && passCoolDownTimer.elapsed(Config.PASS_COOLDOWN)) {
-                passBombTo(player);
-            }
-            // --- END NEW ---
-
-        } else if (playerHasBomb) {
-            // STATE: EVADING
-            //Vec2 moveDirection = entity.getCenter().subtract(player.getCenter()).normalize();
-            Vec2 moveDirection = new Vec2(entity.getCenter().getX() - player.getCenter().getX(), entity.getCenter().getY() - player.getCenter().getY()).normalize();
-            physics.setLinearVelocity(moveDirection.mul(speed).toPoint2D());
+                if (entity.distance(target) <= PASS_RANGE && passCoolDownTimer.elapsed(Config.PASS_COOLDOWN)) {
+                    passBombTo(target);
+                }
+            });
 
         } else {
-            // STATE: WANDERING
-            if (wanderTimer.elapsed(Duration.seconds(2))) {
-                changeWanderDirection();
+            // AI does NOT have the bomb. Decide whether to evade or wander.
+            Optional<Entity> bombHolderOpt = findBombHolder();
+
+            if (bombHolderOpt.isPresent()) {
+                // STATE: EVADING - Someone has the bomb, run away!
+                Entity bombHolder = bombHolderOpt.get();
+                Point2D moveDirection = entity.getCenter().subtract(bombHolder.getCenter()).normalize();
+                physics.setLinearVelocity(moveDirection.multiply(speed));
+            } else {
+                // STATE: WANDERING - No one has the bomb (it's between rounds). Move around.
+                if (wanderTimer.elapsed(Duration.seconds(2))) {
+                    changeWanderDirection();
+                }
+                physics.setLinearVelocity(wanderDirection.mul(speed).toPoint2D());
             }
-            physics.setLinearVelocity(wanderDirection.mul(speed).toPoint2D());
         }
+    }
+
+    // ✅ NEW HELPER METHOD
+    private Optional<Entity> findNearestTarget() {
+        return FXGL.getGameWorld().getEntitiesFiltered(e -> !e.equals(entity) && (e.isType(EntityType.PLAYER) || e.isType(EntityType.AI)))
+                .stream()
+                .min((e1, e2) -> Double.compare(entity.distance(e1), entity.distance(e2)));
+    }
+
+    // ✅ NEW HELPER METHOD
+    private Optional<Entity> findBombHolder() {
+        return FXGL.getGameWorld().getEntitiesFiltered(e -> {
+                    if (e.isType(EntityType.PLAYER)) return e.getComponent(PlayerComponent.class).hasBomb();
+                    if (e.isType(EntityType.AI)) return e.getComponent(AIComponent.class).hasBomb();
+                    return false;
+                })
+                .stream()
+                .findFirst();
     }
 
     /**
@@ -82,12 +102,14 @@ public class AIComponent extends Component {
      * @param target The entity to receive the bomb (the player).
      */
     private void passBombTo(Entity target) {
-        // Unbind the bomb from the AI's position
         bombEntity.xProperty().unbind();
         bombEntity.yProperty().unbind();
 
-        // Give the bomb to the player
-        target.getComponent(PlayerComponent.class).receiveBomb(bombEntity);
+        if (target.isType(EntityType.PLAYER)) {
+            target.getComponent(PlayerComponent.class).receiveBomb(bombEntity);
+        } else { // It's an AI
+            target.getComponent(AIComponent.class).receiveBomb(bombEntity);
+        }
 
         // Update the AI's state
         this.hasBomb = false;
