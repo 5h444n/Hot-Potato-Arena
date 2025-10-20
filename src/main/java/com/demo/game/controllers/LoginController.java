@@ -43,7 +43,7 @@ public class LoginController {
             // Store user in the singleton manager
             SceneManager.getInstance().setCurrentUser(user);
 
-            // Switch to the main menu FXML
+            // It MUST point to mainmenu.fxml
             switchToView("/com/demo/game/fxml/mainmenu.fxml");
 
         } else {
@@ -52,9 +52,6 @@ public class LoginController {
         }
     }
 
-    // **********************************
-    // ** THIS IS THE NEW, FIXED METHOD **
-    // **********************************
     @FXML
     private void handleShowRegister() {
         // Switch to the registration view

@@ -1,4 +1,3 @@
-// File: com/demo/game/GameApp.java
 package com.demo.game;
 
 import com.almasb.fxgl.app.GameApplication;
@@ -17,14 +16,14 @@ import com.demo.game.components.AIComponent;
 import com.demo.game.components.BombComponent;
 import com.demo.game.components.PlayerComponent;
 import com.demo.game.components.PortalComponent;
-import com.demo.game.controllers.MultiplayerMenuController; // To get client instance
+import com.demo.game.controllers.MultiplayerMenuController;
 import com.demo.game.database.DatabaseConnection;
 import com.demo.game.database.UserDAO;
 import com.demo.game.events.BombExplodedEvent;
 import com.demo.game.factories.*;
 import com.demo.game.models.User;
 import com.demo.game.network.GameClient;
-import com.demo.game.network.messages.*; // Import all messages
+import com.demo.game.network.messages.*;
 import com.demo.game.scenes.LoginScene;
 import com.demo.game.ui.MultiplayerManager;
 import com.demo.game.ui.SceneManager;
@@ -41,30 +40,31 @@ import java.util.Map;
 
 import static com.demo.game.Config.*;
 
+/**
+ * Main FXGL Game Application class for Hot Potato Arena.
+ * Handles game initialization, input, updates, UI, physics, and networking (client-side).
+ */
 public class GameApp extends GameApplication {
 
     // --- Core Properties ---
     private UserDAO userDAO;
     private User currentUser;
-    private GameMode gameMode;
 
     // --- Entity Properties ---
-    private Entity playerEntity; // Represents the local player's entity (in SP)
-    private PlayerComponent playerComponent; // Component for the local player (in SP)
+    /** The FXGL entity representing the locally controlled player (only used in Single Player). */
+    private Entity playerEntity;
+    /** The component managing the locally controlled player's state (only used in Single Player). */
+    private PlayerComponent playerComponent;
 
     // --- Multiplayer Client Properties ---
     private GameClient gameClient;
-    // Map server client ID to local FXGL entity
     private Map<Integer, Entity> clientIdToEntity = new HashMap<>();
-    private Entity bombEntity; // Reference to the single bomb entity
-    // Our own client ID assigned by the server (0 for host)
+    private Entity bombEntity;
     private int myClientId = -1;
-    // **FIX**: Track the bomb holder ID locally
     private int currentBombHolderId = -1;
 
-    // --- Interpolation (For smooth movement) ---
+    // --- Interpolation ---
     private Map<Integer, Point2D> targetPositions = new HashMap<>();
-    // Adjust for smoothness
     private static final double INTERPOLATION_FACTOR = 0.1;
 
     @Override
@@ -73,11 +73,9 @@ public class GameApp extends GameApplication {
         settings.setHeight(SCREEN_HEIGHT);
         settings.setTitle(GAME_TITLE);
         settings.setVersion(GAME_VERSION);
-
         settings.setSceneFactory(new SceneFactory() {
             @Override
             public FXGLMenu newMainMenu() {
-                // Start at the LoginScene, which then handles moving to the main menu
                 return new LoginScene();
             }
         });
@@ -86,23 +84,16 @@ public class GameApp extends GameApplication {
 
     @Override
     protected void onPreInit() {
-        // Get game mode and user from our singleton managers
-        gameMode = MultiplayerManager.getInstance().getGameMode();
         currentUser = MultiplayerManager.getInstance().getLocalUser();
-
-        // Fallback for guest
         if (currentUser == null) {
             currentUser = new User(0, "Guest", "guest@example.com");
             SceneManager.getInstance().setCurrentUser(currentUser);
         }
-
         userDAO = new UserDAO();
 
-        // --- Clean up networking on window close ---
         FXGL.getPrimaryStage().setOnCloseRequest(e -> {
             System.out.println("Window closed, disconnecting...");
             DatabaseConnection.getInstance().disconnect();
-            // Stop server/client threads
             MultiplayerMenuController.stopExistingConnections();
             Platform.exit();
         });
@@ -110,29 +101,28 @@ public class GameApp extends GameApplication {
 
     @Override
     protected void initGameVars(Map<String, Object> vars) {
-        // Single Player Vars
         vars.put("score", SCORE);
         vars.put("lives", STARTING_LIVES);
         vars.put("level", 1);
-        // Shared Var for UI
-        // UI variable
         vars.put("bombTime", BOMB_TIMER_DURATION.toSeconds());
     }
 
     @Override
     protected void initGame() {
-        // Factories needed for both modes
+        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
+        System.out.println("initGame: Current Mode is " + currentMode);
+
+        FXGL.getGameWorld().getEntitiesCopy().forEach(Entity::removeFromWorld);
+
         FXGL.getGameWorld().addEntityFactory(new PlayerFactory());
-        FXGL.getGameWorld().addEntityFactory(new AIFactory()); // Only used in SP
+        FXGL.getGameWorld().addEntityFactory(new AIFactory());
         FXGL.getGameWorld().addEntityFactory(new BombFactory());
         FXGL.getGameWorld().addEntityFactory(new WallFactory());
-        FXGL.getGameWorld().addEntityFactory(new PortalFactory()); // Only used in SP
+        FXGL.getGameWorld().addEntityFactory(new PortalFactory());
 
-        // Route to the correct game mode logic
-        if (gameMode == GameMode.SINGLE_PLAYER) {
+        if (currentMode == GameMode.SINGLE_PLAYER) {
             initSinglePlayer();
         } else {
-            // Both MULTIPLAYER_HOST and MULTIPLAYER_CLIENT run this
             initMultiplayerClient();
         }
     }
@@ -143,12 +133,10 @@ public class GameApp extends GameApplication {
 
     private void initSinglePlayer() {
         loadSinglePlayerArena();
-        // Listen for local bomb explosion events
         FXGL.getEventBus().addEventHandler(BombExplodedEvent.ANY, this::onSinglePlayerBombExploded);
     }
 
     private void loadSinglePlayerArena() {
-        FXGL.getGameWorld().getEntitiesCopy().forEach(Entity::removeFromWorld);
         spawnWalls();
         playerEntity = FXGL.spawn("player", new SpawnData(SCREEN_WIDTH / 2.0 - PLAYER_SIZE, SCREEN_HEIGHT / 2.0).put("username", currentUser.getUsername()));
         playerComponent = playerEntity.getComponent(PlayerComponent.class);
@@ -250,34 +238,37 @@ public class GameApp extends GameApplication {
     private void initMultiplayerClient() {
         gameClient = MultiplayerMenuController.getGameClientInstance();
         if (gameClient == null || !gameClient.isRunning()) {
-            System.err.println("Multiplayer Error: Client not connected. Returning to menu.");
-            FXGL.getDialogService().showMessageBox("Connection Error. Returning to menu.", () -> {
-                MultiplayerMenuController.stopExistingConnections(); // Ensure cleanup
-                FXGL.getGameController().gotoMainMenu();
+            System.err.println("Multiplayer Error: Client not connected.");
+
+            // FIX for IllegalStateException: Ensure UI calls are on the FX thread.
+            Platform.runLater(() -> {
+                FXGL.getDialogService().showMessageBox("Connection Error.", () -> {
+                    // This part will also run on the FX thread
+                    FXGL.getGameController().gotoMainMenu();
+                });
             });
             return;
         }
 
-        // Host is always client ID 0
-        myClientId = (gameMode == GameMode.MULTIPLAYER_HOST) ? 0 : -1;
+        myClientId = -1;
+        spawnWalls();
 
-        spawnWalls(); // Walls are static and local
-
-        // Set the message handler for GameApp
-        // This is the most important part!
         gameClient.setOnMessageReceived(this::handleNetworkMessage);
+        System.out.println("Multiplayer initialized. Message handler set.");
 
-        // Don't spawn entities yet, wait for GameStartMessage
-        System.out.println("Multiplayer initialized. Waiting for GameStartMessage...");
+        MultiplayerManager manager = MultiplayerManager.getInstance();
+        if (manager.isGameStartDataAvailable()) {
+            System.out.println("initMultiplayerClient: GameStart data found. Processing immediately.");
+            handleGameStart(manager.getInitialPositions(), manager.getInitialUsernames());
+            manager.resetGameStartData();
+        } else {
+            System.out.println("initMultiplayerClient: No GameStart data found. Waiting for message...");
+        }
     }
 
-    /**
-     * Central handler for ALL messages received from the server.
-     * This runs on the JavaFX/FXGL thread.
-     */
     private void handleNetworkMessage(NetworkMessage message) {
         if (message instanceof GameStartMessage) {
-            handleGameStart((GameStartMessage) message);
+            handleGameStart(((GameStartMessage) message).initialPositions, ((GameStartMessage) message).usernames);
         } else if (message instanceof GameStateUpdateMessage) {
             handleGameStateUpdate((GameStateUpdateMessage) message);
         } else if (message instanceof BombPassMessage) {
@@ -287,67 +278,58 @@ public class GameApp extends GameApplication {
         } else if (message instanceof GameOverMessage) {
             handleGameOver((GameOverMessage) message);
         }
-        // We ignore LobbyUpdateMessage here, as it's handled by LobbyController
     }
 
-    /**
-     * Spawns all players and the bomb when the game starts.
-     */
-    private void handleGameStart(GameStartMessage msg) {
-        System.out.println("Received GameStartMessage. Spawning entities...");
-        FXGL.getGameWorld().getEntitiesCopy().forEach(Entity::removeFromWorld);
-        spawnWalls();
+    private void handleGameStart(Map<Integer, SPoint2D> initialPositions, List<String> usernames) {
+        System.out.println("handleGameStart: Processing game start data...");
+
         clientIdToEntity.clear();
         targetPositions.clear();
 
-        // Spawn all players based on server data
-        List<String> usernames = msg.usernames;
-        int userIndex = 0;
-        for (Map.Entry<Integer, Point2D> entry : msg.initialPositions.entrySet()) {
-            int clientId = entry.getKey();
-            Point2D position = entry.getValue();
-            String username = (userIndex < usernames.size()) ? usernames.get(userIndex) : "Player " + clientId;
-
-            Entity pEntity = FXGL.spawn("player", new SpawnData(position).put("username", username));
-            clientIdToEntity.put(clientId, pEntity);
-            // Initialize target position for interpolation
-            targetPositions.put(clientId, position);
-
-            // Identify the local player
-            if (username.startsWith(currentUser.getUsername())) {
-                playerEntity = pEntity; // This is our local entity
-                // We don't need playerComponent in MP, server controls it
-                // playerComponent = pEntity.getComponent(PlayerComponent.class);
-                myClientId = clientId; // Assign our ID
-                System.out.println("Identified local player: ID=" + myClientId + ", Entity=" + playerEntity);
-            }
-            userIndex++;
+        if (initialPositions == null || usernames == null) {
+            System.err.println("handleGameStart: ERROR - Received null start data!");
+            return;
         }
 
-        // Spawn the single bomb entity (initially off-screen)
-        bombEntity = FXGL.spawn("bomb", -100, -100);
+        for (Map.Entry<Integer, SPoint2D> entry : initialPositions.entrySet()) {
+            int clientId = entry.getKey();
+            Point2D position = entry.getValue().toPoint2D();
+            String username = (clientId < usernames.size()) ? usernames.get(clientId) : "Player " + clientId;
 
-        System.out.println("Multiplayer game started locally.");
+            Entity pEntity = FXGL.spawn("player", new SpawnData(position).put("username", username));
+
+            if (pEntity == null || !pEntity.isActive()) {
+                System.err.println("    Spawned entity FAILED for client ID: " + clientId);
+                continue;
+            }
+
+            clientIdToEntity.put(clientId, pEntity);
+            targetPositions.put(clientId, position);
+
+            if (username.startsWith(currentUser.getUsername())) {
+                myClientId = clientId;
+                System.out.println("    Identified local player: ID=" + myClientId);
+            }
+        }
+
+        if (bombEntity == null || !bombEntity.isActive()) {
+            bombEntity = FXGL.spawn("bomb", -100, -100);
+        }
+        System.out.println("handleGameStart: Finished processing.");
     }
 
-    /**
-     * Receives frequent updates on player/bomb positions from the server.
-     */
     private void handleGameStateUpdate(GameStateUpdateMessage msg) {
-        if (bombEntity == null) return; // Not initialized yet
+        if (bombEntity == null) return;
 
-        // Update target positions for interpolation
-        // This just stores the *goal* position. onUpdate() handles the smooth move.
-        targetPositions.putAll(msg.playerPositions);
+        targetPositions.clear();
+        for (Map.Entry<Integer, SPoint2D> entry : msg.playerPositions.entrySet()) {
+            targetPositions.put(entry.getKey(), entry.getValue().toPoint2D());
+        }
 
-        // --- Bomb State ---
-        // **FIX**: Store the current bomb holder ID
         this.currentBombHolderId = msg.bombHolderId;
-        Point2D currentBombPos = msg.bombPosition;
+        Point2D currentBombPos = msg.bombPosition.toPoint2D();
 
-        // Update bomb visual position
         if (currentBombHolderId == -1) {
-            // Unbind if it was bound
             if (bombEntity.xProperty().isBound()) {
                 bombEntity.xProperty().unbind();
                 bombEntity.yProperty().unbind();
@@ -355,92 +337,59 @@ public class GameApp extends GameApplication {
             bombEntity.setPosition(currentBombPos);
         } else {
             Entity holder = clientIdToEntity.get(currentBombHolderId);
-            if (holder != null) {
-                // Bind bomb to the new holder visually
-                // We unbind first to ensure it's not bound to an old player
+            if (holder != null && holder.isActive()) {
                 bombEntity.xProperty().unbind();
                 bombEntity.yProperty().unbind();
                 bombEntity.xProperty().bind(holder.xProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
                 bombEntity.yProperty().bind(holder.yProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
             } else {
-                // Holder doesn't exist locally? May happen briefly. Position directly.
+                if (bombEntity.xProperty().isBound()) {
+                    bombEntity.xProperty().unbind();
+                    bombEntity.yProperty().unbind();
+                }
                 bombEntity.setPosition(currentBombPos);
             }
         }
 
-        // Update UI bomb timer
         double time = msg.bombTimerRemaining;
         FXGL.set("bombTime", time >= 0 ? time : BOMB_TIMER_DURATION.toSeconds());
     }
 
-    /**
-     * Handles the bomb pass event (plays sound).
-     */
     private void handleBombPass(BombPassMessage msg) {
-        // The GameStateUpdate will handle the actual binding/positioning.
-        // This message is for immediate feedback (sound).
-        System.out.println("Received BombPassMessage: New holder = " + msg.newHolderClientId);
         FXGL.play("pass.wav");
-
-        // **FIX**: Update the local bomb holder ID immediately
         this.currentBombHolderId = msg.newHolderClientId;
-
-        // Reset UI timer immediately for responsiveness
         FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
     }
 
-    /**
-     * Hides a player when they are eliminated.
-     */
     private void handlePlayerEliminated(PlayerEliminatedMessage msg) {
-        System.out.println("Received PlayerEliminatedMessage: ID = " + msg.eliminatedClientId);
         Entity eliminated = clientIdToEntity.get(msg.eliminatedClientId);
         if (eliminated != null) {
-            // Visually eliminate the player
             eliminated.getViewComponent().setVisible(false);
-            PhysicsComponent physics = eliminated.getComponent(PhysicsComponent.class);
-            // Move off-screen reliably
-            physics.overwritePosition(new Point2D(-200, -200));
+            eliminated.getComponent(PhysicsComponent.class).overwritePosition(new Point2D(-200, -200));
 
-            // **FIX**: Use the cached bomb holder ID to check for unbinding
-            // Unbind bomb if they were holding it (visual cleanup)
             if (bombEntity != null && msg.eliminatedClientId == this.currentBombHolderId) {
                 bombEntity.xProperty().unbind();
                 bombEntity.yProperty().unbind();
-                bombEntity.setPosition(new Point2D(-100,-100)); // Move bomb off-screen
-                this.currentBombHolderId = -1; // Bomb is now un-held
+                bombEntity.setPosition(new Point2D(-100,-100));
+                this.currentBombHolderId = -1;
             }
-
-            // Check if it was us
             if (msg.eliminatedClientId == myClientId) {
                 FXGL.getNotificationService().pushNotification("You have been eliminated!");
-                // Input is still sent, but server will ignore it
             }
         }
     }
 
-    /**
-     * Shows the game over dialog and returns to the menu.
-     */
     private void handleGameOver(GameOverMessage msg) {
-        System.out.println("Received GameOverMessage: Winner = " + msg.winnerUsername);
         String message = msg.winnerUsername.equals("No one") ? "Game Over! It's a draw!"
-                : msg.winnerUsername.equals(currentUser.getUsername()) ? "You Win!"
+                : msg.winnerUsername.startsWith(currentUser.getUsername()) ? "You Win!"
                 : msg.winnerUsername + " wins!";
 
-        // Ensure cleanup happens *before* showing dialog
         MultiplayerManager.getInstance().reset();
-        MultiplayerMenuController.stopExistingConnections(); // Stop client thread
+        MultiplayerMenuController.stopExistingConnections();
 
-        FXGL.getDialogService().showMessageBox(message, () -> {
-            // Already cleaned up, just go to menu
-            FXGL.getGameController().gotoMainMenu();
-        });
+        FXGL.getDialogService().showMessageBox(message, () -> FXGL.getGameController().gotoMainMenu());
     }
 
-    /**
-     * Helper method to spawn the boundary walls.
-     */
     private void spawnWalls() {
         for (int x = 0; x < SCREEN_WIDTH; x += WALL_SIZE) {
             FXGL.spawn("wall", x, 0);
@@ -456,98 +405,99 @@ public class GameApp extends GameApplication {
     //                   COMMON INITIALIZATION
     // =================================================================
 
+    /**
+     * Initializes player input actions.
+     * This method contains the fix for the NullPointerException.
+     */
     @Override
     protected void initInput() {
         Input input = FXGL.getInput();
+        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
 
-        // --- WASD Movement Actions ---
+        // FIX for NullPointerException: Check the game mode *inside* the action.
+        // This ensures 'playerComponent' is only accessed in SINGLE_PLAYER.
 
-        // A - Move Left
         input.addAction(new UserAction("Move Left") {
             @Override
             protected void onAction() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.moveLeft();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.moveLeft();
                 } else {
                     sendInput(PlayerInputMessage.InputType.MOVE_LEFT);
                 }
             }
             @Override
             protected void onActionEnd() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.stopMovingX();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.stopMovingX();
                 } else {
                     sendInput(PlayerInputMessage.InputType.STOP_X);
                 }
             }
         }, KeyCode.A);
 
-        // D - Move Right
         input.addAction(new UserAction("Move Right") {
             @Override
             protected void onAction() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.moveRight();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.moveRight();
                 } else {
                     sendInput(PlayerInputMessage.InputType.MOVE_RIGHT);
                 }
             }
             @Override
             protected void onActionEnd() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.stopMovingX();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.stopMovingX();
                 } else {
                     sendInput(PlayerInputMessage.InputType.STOP_X);
                 }
             }
         }, KeyCode.D);
 
-        // W - Move Up
         input.addAction(new UserAction("Move Up") {
             @Override
             protected void onAction() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.moveUp();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.moveUp();
                 } else {
                     sendInput(PlayerInputMessage.InputType.MOVE_UP);
                 }
             }
             @Override
             protected void onActionEnd() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.stopMovingY();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.stopMovingY();
                 } else {
                     sendInput(PlayerInputMessage.InputType.STOP_Y);
                 }
             }
         }, KeyCode.W);
 
-        // S - Move Down
         input.addAction(new UserAction("Move Down") {
             @Override
             protected void onAction() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.moveDown();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.moveDown();
                 } else {
                     sendInput(PlayerInputMessage.InputType.MOVE_DOWN);
                 }
             }
             @Override
             protected void onActionEnd() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.stopMovingY();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.stopMovingY();
                 } else {
                     sendInput(PlayerInputMessage.InputType.STOP_Y);
                 }
             }
         }, KeyCode.S);
 
-        // SPACE - Pass Bomb
         input.addAction(new UserAction("Pass Bomb") {
             @Override
             protected void onActionBegin() {
-                if (gameMode == GameMode.SINGLE_PLAYER) {
-                    playerComponent.passBomb();
+                if (currentMode == GameMode.SINGLE_PLAYER) {
+                    if (playerComponent != null) playerComponent.passBomb();
                 } else {
                     sendInput(PlayerInputMessage.InputType.PASS_BOMB);
                 }
@@ -555,29 +505,24 @@ public class GameApp extends GameApplication {
         }, KeyCode.SPACE);
     }
 
-    /**
-     * Helper method to send an input message to the server.
-     */
     private void sendInput(PlayerInputMessage.InputType inputType) {
         if (gameClient != null && gameClient.isRunning()) {
             gameClient.sendMessage(new PlayerInputMessage(inputType));
         }
     }
 
-    // This is no longer used, as our custom server handles physics
     @Override
     protected void initPhysics() {
         FXGL.getPhysicsWorld().setGravity(0, 0);
+        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
 
-        // Wall collisions are still useful for SP
-        FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.WALL) {});
-        FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.AI, EntityType.WALL) {});
-
-        if (gameMode == GameMode.SINGLE_PLAYER) {
+        if (currentMode == GameMode.SINGLE_PLAYER) {
+            FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.WALL) {});
+            FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.AI, EntityType.WALL) {});
             FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.PORTAL) {
                 @Override
-                protected void onCollisionBegin(Entity player, Entity portal) {
-                    portal.getComponent(PortalComponent.class).teleport(player);
+                protected void onCollisionBegin(Entity p, Entity portal) {
+                    portal.getComponent(PortalComponent.class).teleport(p);
                 }
             });
             FXGL.getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.AI, EntityType.PORTAL) {
@@ -591,18 +536,16 @@ public class GameApp extends GameApplication {
 
     @Override
     protected void initUI() {
-        // Bomb timer UI is common
         Text bombTimerText = new Text();
         bombTimerText.setTranslateX(SCREEN_WIDTH - 150);
         bombTimerText.setTranslateY(40);
         bombTimerText.setFill(Color.BLACK);
         bombTimerText.setFont(FXGL.getUIFactoryService().newFont(16));
-        // Bind to the "bombTime" game variable
         bombTimerText.textProperty().bind(FXGL.getWorldProperties().doubleProperty("bombTime").asString("Bomb Time: %.1f"));
         FXGL.getGameScene().addUINode(bombTimerText);
 
-        if (gameMode == GameMode.SINGLE_PLAYER) {
-            // Single player UI (Score, Lives)
+        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
+        if (currentMode == GameMode.SINGLE_PLAYER) {
             Text scoreText = new Text();
             scoreText.setTranslateX(20);
             scoreText.setTranslateY(40);
@@ -619,44 +562,35 @@ public class GameApp extends GameApplication {
 
             FXGL.getGameScene().addUINode(scoreText);
             FXGL.getGameScene().addUINode(livesText);
-        } else {
-            // Multiplayer UI (Could show player list, etc.)
-            // For now, it just shows the bomb timer.
         }
     }
 
     @Override
     protected void onUpdate(double tpf) {
-        if (gameMode == GameMode.SINGLE_PLAYER) {
-            // In SP, BombComponent updates its timer internally
-            // We just need to read it for the UI
+        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
+
+        if (currentMode == GameMode.SINGLE_PLAYER) {
             FXGL.getGameWorld().getSingletonOptional(EntityType.BOMB).ifPresent(bomb -> {
-                double elapsed = bomb.getComponent(BombComponent.class).getElapsedTime();
-                if (elapsed > 0) {
+                BombComponent bombComp = bomb.getComponent(BombComponent.class);
+                double elapsed = bombComp.getElapsedTime();
+                if (elapsed >= 0) {
                     double remaining = BOMB_TIMER_DURATION.toSeconds() - elapsed;
                     FXGL.set("bombTime", Math.max(0, remaining));
                 } else {
                     FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
                 }
             });
-
         } else {
-            // --- Multiplayer Update: Interpolate positions ---
             for (Map.Entry<Integer, Entity> entry : clientIdToEntity.entrySet()) {
-                int clientId = entry.getKey();
                 Entity entity = entry.getValue();
-                Point2D targetPos = targetPositions.get(clientId);
-
+                Point2D targetPos = targetPositions.get(entry.getKey());
                 if (targetPos != null && entity.isActive()) {
                     Point2D currentPos = entity.getPosition();
-                    // Smoothly move from current to target position
                     Point2D interpolatedPos = currentPos.interpolate(targetPos, INTERPOLATION_FACTOR);
-
-                    // Update position directly. Physics is disabled for MP entities
-                    // as the server is authoritative.
                     entity.setPosition(interpolatedPos);
                 }
             }
         }
     }
 }
+

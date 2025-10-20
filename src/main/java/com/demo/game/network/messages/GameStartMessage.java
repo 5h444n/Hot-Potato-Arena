@@ -1,17 +1,22 @@
 package com.demo.game.network.messages;
 
 import java.util.List;
-import javafx.geometry.Point2D;
 import java.util.Map;
 
-// Sent by the host to tell clients the game is starting and provides initial positions
+/**
+ * Sent by the server to all clients when the game begins.
+ * Contains all necessary information to spawn the initial game state.
+ */
 public class GameStartMessage extends NetworkMessage {
     private static final long serialVersionUID = 1L;
-    // Map Client ID (assigned by server) to their starting position
-    public final Map<Integer, Point2D> initialPositions;
-    public final List<String> usernames; // In order of client IDs
 
-    public GameStartMessage(Map<Integer, Point2D> initialPositions, List<String> usernames) {
+    /** Maps a client's ID to their starting position using the serializable SPoint2D. */
+    public final Map<Integer, SPoint2D> initialPositions;
+
+    /** An ordered list of usernames. The index corresponds to the client ID. */
+    public final List<String> usernames;
+
+    public GameStartMessage(Map<Integer, SPoint2D> initialPositions, List<String> usernames) {
         this.initialPositions = initialPositions;
         this.usernames = usernames;
     }

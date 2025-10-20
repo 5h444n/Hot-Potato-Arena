@@ -1,15 +1,13 @@
 package com.demo.game.components;
 
 import com.almasb.fxgl.dsl.FXGL;
-import com.almasb.fxgl.entity.Entity; // Keep Entity import
+import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.component.Component;
-// Remove MultiplayerService import if not used
-// import com.almasb.fxgl.multiplayer.MultiplayerService;
+
 import com.almasb.fxgl.time.LocalTimer;
 import com.demo.game.GameMode;
 import com.demo.game.events.BombExplodedEvent;
-// Remove network message import
-// import com.demo.game.network.PlayerEliminatedMessage;
+
 import com.demo.game.ui.MultiplayerManager; // Keep this
 import javafx.util.Duration;
 
@@ -31,11 +29,8 @@ public class BombComponent extends Component {
         countdownTimer.capture();
         startTimeSeconds = FXGL.getGameTimer().getNow(); // Record start time
         isTicking = true;
-        // Don't set the UI var here, GameApp/GameStateUpdate handles it
-        // FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
     }
 
-    // Helper method for single player UI update?
     public double getElapsedTime() {
         if (!isTicking || startTimeSeconds < 0) return 0;
         return FXGL.getGameTimer().getNow() - startTimeSeconds;
@@ -46,16 +41,13 @@ public class BombComponent extends Component {
     public void onUpdate(double tpf) {
         if (!isTicking) return;
 
-        // --- Explosion check ONLY needed for Single Player ---
         if (gameMode == GameMode.SINGLE_PLAYER) {
             if (countdownTimer.elapsed(BOMB_TIMER_DURATION)) {
                 explodeSinglePlayer();
             }
         }
-        // Multiplayer explosion is handled entirely by the server message
     }
 
-    // Renamed to clarify it's only for SP
     private void explodeSinglePlayer() {
         isTicking = false;
         startTimeSeconds = -1;
@@ -83,7 +75,6 @@ public class BombComponent extends Component {
             FXGL.getEventBus().fireEvent(new BombExplodedEvent(eliminatedEntity));
         }
 
-        // Only remove bomb locally in SP
         entity.removeFromWorld();
     }
 }

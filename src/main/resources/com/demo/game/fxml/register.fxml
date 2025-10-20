@@ -8,11 +8,10 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
-
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.demo.game.controllers.RegisterController"
-      alignment="CENTER" spacing="15" prefHeight="600" prefWidth="800"
-      stylesheets="@../css/style.css">
+<?import javafx.scene.layout.HBox?> <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                                          fx:controller="com.demo.game.controllers.RegisterController"
+                                          alignment="CENTER" spacing="15" prefHeight="600" prefWidth="800"
+                                          stylesheets="@../css/style.css">
 
     <padding>
         <Insets top="50" right="150" bottom="50" left="150"/>

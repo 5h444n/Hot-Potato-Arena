@@ -2,15 +2,14 @@
 package com.demo.game.controllers;
 
 import com.almasb.fxgl.dsl.FXGL;
-// Import our network classes
 import com.demo.game.network.GameClient;
 import com.demo.game.network.GameServer;
-import com.demo.game.network.messages.*; // Import all messages
+import com.demo.game.network.messages.*;
 import com.demo.game.GameMode;
 import com.demo.game.models.User;
 import com.demo.game.ui.MultiplayerManager;
 import javafx.application.Platform;
-import javafx.collections.FXCollections; // Need this for ObservableList
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -29,17 +28,15 @@ public class LobbyController {
 
     private GameMode gameMode;
     private User localUser;
-    private GameClient gameClient; // Client connection
-    private GameServer gameServer; // Server instance (only if host)
+    private GameClient gameClient;
+    private GameServer gameServer;
 
 
     @FXML
     public void initialize() {
         gameMode = MultiplayerManager.getInstance().getGameMode();
         localUser = MultiplayerManager.getInstance().getLocalUser();
-        // Get the active client connection
         gameClient = MultiplayerMenuController.getGameClientInstance();
-        // Get server if we are host
         gameServer = MultiplayerMenuController.getGameServerInstance();
 
         if (gameClient == null) {
@@ -48,36 +45,39 @@ public class LobbyController {
             return;
         }
 
-        // Only the host can see the "Start Game" button
         startGameButton.setVisible(gameMode == GameMode.MULTIPLAYER_HOST);
-
-        // --- Set up message listener ---
-        // This controller now handles messages from the client
         gameClient.setOnMessageReceived(this::handleNetworkMessage);
 
-        // --- Initial Lobby State ---
         if (gameMode == GameMode.MULTIPLAYER_HOST && gameServer != null) {
-            // Host: Display initial list from server instance
             updatePlayerList(gameServer.getCurrentPlayerUsernames());
         } else {
-            // Client: Will receive LobbyUpdateMessage soon
             playerListView.setItems(FXCollections.observableArrayList("Connecting..."));
         }
     }
 
-    // Central message handler for messages received by the GameClient
+    /**
+     * Handles messages while in the lobby. Updates player list or stores game start data.
+     */
     private void handleNetworkMessage(NetworkMessage message) {
-        // Ensure UI updates happen on the JavaFX Application Thread
-        // (GameClient already wraps this, but it's good practice)
         Platform.runLater(() -> {
             if (message instanceof LobbyUpdateMessage) {
                 updatePlayerList(((LobbyUpdateMessage) message).playerUsernames);
+
             } else if (message instanceof GameStartMessage) {
-                // Game is starting!
-                System.out.println("Received GameStartMessage");
-                // Save final player list
-                MultiplayerManager.getInstance().setLobbyPlayers(((GameStartMessage) message).usernames);
-                // Tell FXGL to start the game scene
+                System.out.println("LobbyController: Received GameStartMessage.");
+
+                // --- !!! THE FIX IS HERE !!! ---
+                // 1. Store the message data in the MultiplayerManager
+                MultiplayerManager.getInstance().setGameStartData((GameStartMessage) message);
+                // ---------------------------------
+
+                // 2. Remove THIS controller's message handler
+                if (gameClient != null) {
+                    gameClient.setOnMessageReceived(null);
+                }
+
+                // 3. Tell FXGL to transition to the game scene
+                System.out.println("LobbyController: Starting game scene...");
                 FXGL.getGameController().startNewGame();
             }
         });
@@ -85,32 +85,27 @@ public class LobbyController {
 
     private void updatePlayerList(List<String> usernames) {
         playerListView.setItems(FXCollections.observableArrayList(usernames));
-        // Update manager too
         MultiplayerManager.getInstance().setLobbyPlayers(new ArrayList<>(usernames));
     }
 
 
     @FXML
     private void handleStartGame() {
-        // Only the host can start
         if (gameMode == GameMode.MULTIPLAYER_HOST && gameServer != null) {
             System.out.println("Host clicked Start Game.");
-            // Tell the server instance to start the game logic
             gameServer.submitTask(gameServer::startGame);
         }
     }
 
     @FXML
     private void handleDisconnect() {
-        // Stop server and/or client instances
         MultiplayerMenuController.stopExistingConnections();
         switchToView("/com/demo/game/fxml/multiplayermenu.fxml");
     }
 
     private void switchToView(String fxmlFile) {
-        // Ensure callback is removed before switching view
         if (gameClient != null) {
-            gameClient.setOnMessageReceived(null);
+            gameClient.setOnMessageReceived(null); // Ensure handler is removed
         }
 
         try {
