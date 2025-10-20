@@ -65,7 +65,7 @@ public class GameApp extends GameApplication {
 
     // --- Interpolation ---
     private Map<Integer, Point2D> targetPositions = new HashMap<>();
-    private static final double INTERPOLATION_FACTOR = 0.1;
+    private static final double INTERPOLATION_FACTOR = 0.3;
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -239,11 +239,8 @@ public class GameApp extends GameApplication {
         gameClient = MultiplayerMenuController.getGameClientInstance();
         if (gameClient == null || !gameClient.isRunning()) {
             System.err.println("Multiplayer Error: Client not connected.");
-
-            // FIX for IllegalStateException: Ensure UI calls are on the FX thread.
             Platform.runLater(() -> {
                 FXGL.getDialogService().showMessageBox("Connection Error.", () -> {
-                    // This part will also run on the FX thread
                     FXGL.getGameController().gotoMainMenu();
                 });
             });
@@ -412,14 +409,12 @@ public class GameApp extends GameApplication {
     @Override
     protected void initInput() {
         Input input = FXGL.getInput();
-        GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
-
-        // FIX for NullPointerException: Check the game mode *inside* the action.
-        // This ensures 'playerComponent' is only accessed in SINGLE_PLAYER.
 
         input.addAction(new UserAction("Move Left") {
             @Override
             protected void onAction() {
+                // Always get the latest game mode when the action occurs
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.moveLeft();
                 } else {
@@ -428,6 +423,7 @@ public class GameApp extends GameApplication {
             }
             @Override
             protected void onActionEnd() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.stopMovingX();
                 } else {
@@ -439,6 +435,7 @@ public class GameApp extends GameApplication {
         input.addAction(new UserAction("Move Right") {
             @Override
             protected void onAction() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.moveRight();
                 } else {
@@ -447,6 +444,7 @@ public class GameApp extends GameApplication {
             }
             @Override
             protected void onActionEnd() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.stopMovingX();
                 } else {
@@ -458,6 +456,7 @@ public class GameApp extends GameApplication {
         input.addAction(new UserAction("Move Up") {
             @Override
             protected void onAction() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.moveUp();
                 } else {
@@ -466,6 +465,7 @@ public class GameApp extends GameApplication {
             }
             @Override
             protected void onActionEnd() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.stopMovingY();
                 } else {
@@ -477,6 +477,7 @@ public class GameApp extends GameApplication {
         input.addAction(new UserAction("Move Down") {
             @Override
             protected void onAction() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.moveDown();
                 } else {
@@ -485,6 +486,7 @@ public class GameApp extends GameApplication {
             }
             @Override
             protected void onActionEnd() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.stopMovingY();
                 } else {
@@ -496,6 +498,7 @@ public class GameApp extends GameApplication {
         input.addAction(new UserAction("Pass Bomb") {
             @Override
             protected void onActionBegin() {
+                GameMode currentMode = MultiplayerManager.getInstance().getGameMode();
                 if (currentMode == GameMode.SINGLE_PLAYER) {
                     if (playerComponent != null) playerComponent.passBomb();
                 } else {
