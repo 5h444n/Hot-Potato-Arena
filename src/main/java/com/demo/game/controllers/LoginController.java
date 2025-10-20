@@ -1,13 +1,15 @@
+// File: com/demo/game/controllers/LoginController.java
 package com.demo.game.controllers;
 
 import com.almasb.fxgl.dsl.FXGL;
+import com.demo.game.database.DatabaseConnection;
 import com.demo.game.database.UserDAO;
 import com.demo.game.models.User;
 import com.demo.game.ui.SceneManager;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -15,22 +17,12 @@ import javafx.scene.control.TextField;
 import java.io.IOException;
 
 public class LoginController {
-    @FXML
-    private TextField usernameField;
+
+    @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
-    @FXML private Label errorLabel;
-    @FXML private Button loginButton;
-    @FXML private Button registerButton;
+    @FXML private Label statusLabel;
 
     private UserDAO userDAO = new UserDAO();
-
-    @FXML
-    public void initialize() {
-        errorLabel.setVisible(false);
-
-        // Enable login with Enter key
-        passwordField.setOnAction(e -> handleLogin());
-    }
 
     @FXML
     private void handleLogin() {
@@ -38,43 +30,58 @@ public class LoginController {
         String password = passwordField.getText();
 
         if (username.isEmpty() || password.isEmpty()) {
-            showError("Please enter username and password");
+            showError("Username and password are required.");
             return;
         }
 
         User user = userDAO.loginUser(username, password);
 
         if (user != null) {
-            // SUCCESS!
-            // 1. Set the current user in our global state manager
+            // Login successful
+            statusLabel.setVisible(false);
+            System.out.println("Login successful: " + user.getUsername());
+            // Store user in the singleton manager
             SceneManager.getInstance().setCurrentUser(user);
 
-            // 2. Switch the view to the main menu
+            // Switch to the main menu FXML
             switchToView("/com/demo/game/fxml/mainmenu.fxml");
+
         } else {
-            showError("Invalid username or password");
+            // Login failed
+            showError("Invalid username or password.");
         }
     }
 
+    // **********************************
+    // ** THIS IS THE NEW, FIXED METHOD **
+    // **********************************
     @FXML
-    private void handleRegister() {
+    private void handleShowRegister() {
+        // Switch to the registration view
         switchToView("/com/demo/game/fxml/register.fxml");
     }
 
-    /**
-     * A helper method to switch the content within the current FXGL scene.
-     */
+    @FXML
+    private void handleQuit() {
+        System.out.println("Quit button clicked. Disconnecting database...");
+        DatabaseConnection.getInstance().disconnect();
+        FXGL.getGameController().exit();
+    }
+
     private void switchToView(String fxmlFile) {
         try {
             Parent newRoot = FXMLLoader.load(getClass().getResource(fxmlFile));
-            FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+            // Ensure we are on the JavaFX thread for scene graph modifications
+            Platform.runLater(() -> {
+                FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+            });
         } catch (IOException e) {
             System.err.println("Failed to switch view: " + e.getMessage());
         }
     }
 
     private void showError(String message) {
-        errorLabel.setText(message);
-        errorLabel.setVisible(true);
+        statusLabel.setText(message);
+        statusLabel.setVisible(true);
     }
 }

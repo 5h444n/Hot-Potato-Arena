@@ -1,59 +1,69 @@
 package com.demo.game.components;
 
 import com.almasb.fxgl.dsl.FXGL;
+import com.almasb.fxgl.entity.Entity; // Keep Entity import
 import com.almasb.fxgl.entity.component.Component;
+// Remove MultiplayerService import if not used
+// import com.almasb.fxgl.multiplayer.MultiplayerService;
 import com.almasb.fxgl.time.LocalTimer;
+import com.demo.game.GameMode;
 import com.demo.game.events.BombExplodedEvent;
+// Remove network message import
+// import com.demo.game.network.PlayerEliminatedMessage;
+import com.demo.game.ui.MultiplayerManager; // Keep this
 import javafx.util.Duration;
 
 import static com.demo.game.Config.BOMB_TIMER_DURATION;
 
 public class BombComponent extends Component {
     private LocalTimer countdownTimer;
-
     private boolean isTicking = false;
+    private GameMode gameMode;
+    private double startTimeSeconds = -1; // For getElapsedTime
 
     @Override
     public void onAdded() {
-        // This is called once when the component is attached to an entity
         countdownTimer = FXGL.newLocalTimer();
+        this.gameMode = MultiplayerManager.getInstance().getGameMode();
     }
-
 
     public void startTimer() {
         countdownTimer.capture();
-        System.out.println(countdownTimer);
+        startTimeSeconds = FXGL.getGameTimer().getNow(); // Record start time
         isTicking = true;
-        FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
+        // Don't set the UI var here, GameApp/GameStateUpdate handles it
+        // FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
     }
 
-    public void resetTimer() {
-        // Reset the internal timer for the explosion check
-        countdownTimer.capture();
-        // Also reset the public game variable for the UI
-        FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds());
+    // Helper method for single player UI update?
+    public double getElapsedTime() {
+        if (!isTicking || startTimeSeconds < 0) return 0;
+        return FXGL.getGameTimer().getNow() - startTimeSeconds;
     }
+
 
     @Override
     public void onUpdate(double tpf) {
-        // This is called every frame
         if (!isTicking) return;
 
-        //FXGL.set("bombTime", BOMB_TIMER_DURATION.toSeconds() - countdownTimer.capture());
-
-        if (countdownTimer.elapsed(BOMB_TIMER_DURATION)) {
-            explode();
+        // --- Explosion check ONLY needed for Single Player ---
+        if (gameMode == GameMode.SINGLE_PLAYER) {
+            if (countdownTimer.elapsed(BOMB_TIMER_DURATION)) {
+                explodeSinglePlayer();
+            }
         }
+        // Multiplayer explosion is handled entirely by the server message
     }
 
-    private void explode() {
+    // Renamed to clarify it's only for SP
+    private void explodeSinglePlayer() {
         isTicking = false;
-//        FXGL.play("explosion.wav");
-//        FXGL.spawn("explosion", entity.getCenter().subtract(32, 32));
+        startTimeSeconds = -1;
+        // FXGL.play("explosion.wav");
 
-        // Find the holder of the bomb
         var holderOpt = FXGL.getGameWorld().getEntities().stream()
                 .filter(e -> {
+                    // Only check SP components
                     if (e.hasComponent(PlayerComponent.class) && e.getComponent(PlayerComponent.class).hasBomb()) {
                         return true;
                     }
@@ -61,18 +71,19 @@ public class BombComponent extends Component {
                 })
                 .findFirst();
 
-        // Eliminate the holder
-        holderOpt.ifPresent(holder -> {
-            if (holder.hasComponent(PlayerComponent.class)) {
-                holder.getComponent(PlayerComponent.class).eliminate();
-            } else if (holder.hasComponent(AIComponent.class)) {
-                holder.getComponent(AIComponent.class).eliminate();
+        Entity eliminatedEntity = holderOpt.orElse(null);
+
+        if (eliminatedEntity != null) {
+            // SP uses local events
+            if (eliminatedEntity.hasComponent(PlayerComponent.class)) {
+                eliminatedEntity.getComponent(PlayerComponent.class).eliminate();
+            } else if (eliminatedEntity.hasComponent(AIComponent.class)) {
+                eliminatedEntity.getComponent(AIComponent.class).eliminate();
             }
-        });
+            FXGL.getEventBus().fireEvent(new BombExplodedEvent(eliminatedEntity));
+        }
 
+        // Only remove bomb locally in SP
         entity.removeFromWorld();
-
-        // This event now signals that *someone* was eliminated.
-        FXGL.getEventBus().fireEvent(new BombExplodedEvent(holderOpt.orElse(null)));
     }
 }

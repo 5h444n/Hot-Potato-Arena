@@ -1,79 +1,122 @@
-.root-container {
-    -fx-background-color: linear-gradient(to bottom, #2C3E50, #34495E);
+/* File: src/main/resources/com/demo/game/css/style.css */
+
+.root {
+    -fx-font-family: 'Verdana', 'Arial', sans-serif;
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e0e0e0;
 }
 
-.title, .game-title {
-    -fx-text-fill: #ECF0F1;
+/* === Headings === */
+.label-title {
+    -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 10, 0, 0, 5);
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 10, 0.5, 2, 2);
 }
 
-.label {
-    -fx-text-fill: #BDC3C7;
+.label-header {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f0f0f0;
+}
+
+.label-regular {
     -fx-font-size: 14px;
+    -fx-text-fill: #cccccc;
 }
 
-.welcome-label {
-    -fx-text-fill: #3498DB;
+/* === Buttons === */
+.button {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #4a4a4a 0%, #3a3a3a 100%);
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #555555;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 10 20;
+    -fx-min-width: 200px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 5, 0.2, 1, 1);
 }
 
-.score-label {
-    -fx-text-fill: #F39C12;
+.button:hover {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #5a5a5a 0%, #4a4a4a 100%);
+    -fx-effect: dropshadow(gaussian, rgba(0, 120, 255, 0.5), 10, 0.5, 0, 0);
 }
 
-.error-label {
-    -fx-text-fill: #E74C3C;
-    -fx-font-size: 12px;
+.button:pressed {
+    -fx-background-color: #333333;
+    -fx-translate-y: 1;
 }
 
+/* Back/Disconnect buttons */
+.button-back {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #8c2a2a 0%, #7c1a1a 100%);
+    -fx-border-color: #9c3a3a;
+    -fx-min-width: 150px;
+}
+.button-back:hover {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #9c3a3a 0%, #8c2a2a 100%);
+}
+
+/* === Form Elements === */
 .text-field, .password-field {
-    -fx-background-color: #34495E;
-    -fx-text-fill: #ECF0F1;
-    -fx-border-color: #3498DB;
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 14px;
+    -fx-background-radius: 5;
+    -fx-border-color: #555555;
     -fx-border-radius: 5;
-    -fx-background-radius: 5;
-    -fx-padding: 8;
+    -fx-prompt-text-fill: #777777;
 }
 
-.primary-button, .menu-button {
-    -fx-background-color: #3498DB;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #0078d7;
+    -fx-border-width: 2;
+}
+
+.check-box .box {
+    -fx-background-color: #2a2a2a;
+    -fx-border-color: #555555;
+    -fx-border-radius: 3;
+}
+.check-box:selected .mark {
+    -fx-background-color: #0078d7;
+}
+.check-box {
+    -fx-text-fill: #cccccc;
+}
+
+/* === Status Labels === */
+.label-error {
+    -fx-text-fill: #ff6b6b;
     -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-padding: 10 20;
-    -fx-background-radius: 5;
 }
-
-.primary-button:hover, .menu-button:hover {
-    -fx-background-color: #2980B9;
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
-}
-
-.secondary-button {
-    -fx-background-color: #95A5A6;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
-    -fx-padding: 10 20;
-    -fx-background-radius: 5;
-}
-
-.secondary-button:hover {
-    -fx-background-color: #7F8C8D;
-}
-
-.quit-button {
-    -fx-background-color: #E74C3C;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+.label-success {
+    -fx-text-fill: #6bff6b;
     -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-padding: 10 20;
-    -fx-background-radius: 5;
 }
 
-.quit-button:hover {
-    -fx-background-color: #C0392B;
+/* === List/Table Views === */
+.list-view, .table-view {
+    -fx-background-color: #2a2a2a;
+    -fx-border-color: #555555;
+}
+.list-view .list-cell, .table-view .table-cell {
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 14px;
+}
+.list-view .list-cell:odd, .table-view .table-row-cell:odd .table-cell {
+    -fx-background-color: #333333;
+}
+.list-view .list-cell:selected, .table-view .table-row-cell:selected .table-cell {
+    -fx-background-color: #0078d7;
+    -fx-text-fill: #ffffff;
+}
+.table-view .column-header {
+    -fx-background-color: #3a3a3a;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
 }

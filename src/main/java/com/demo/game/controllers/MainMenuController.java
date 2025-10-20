@@ -1,9 +1,11 @@
+// File: com/demo/game/controllers/MainMenuController.java
 package com.demo.game.controllers;
 
 import com.almasb.fxgl.dsl.FXGL;
 import com.demo.game.database.DatabaseConnection;
 import com.demo.game.models.User;
 import com.demo.game.ui.SceneManager;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -34,18 +36,23 @@ public class MainMenuController {
 
     @FXML
     private void handleSinglePlayer() {
-        // THIS IS THE NEW LOGIC
-        // It tells the running "Movie Theater" to switch from the lobby to the cinema.
-        FXGL.getGameController().startNewGame();
+        // FIX: Switch to the game mode selection screen
+        switchToView("/com/demo/game/fxml/gamemodeselection.fxml");
     }
 
     @FXML
     private void handleMultiplayer() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Coming Soon");
-        alert.setHeaderText("Multiplayer Mode");
-        alert.setContentText("Multiplayer mode is coming soon! Stay tuned for updates.");
-        alert.showAndWait();
+        // FIX: Switch to the (soon to be uncommented) multiplayer menu
+        switchToView("/com/demo/game/fxml/multiplayermenu.fxml");
+    }
+
+    // **********************************
+    // ** THIS IS THE NEW, FIXED METHOD **
+    // **********************************
+    @FXML
+    private void handleProfile() {
+        // Switch to the profile view
+        switchToView("/com/demo/game/fxml/profile.fxml");
     }
 
     @FXML
@@ -60,10 +67,41 @@ public class MainMenuController {
 
     private void switchToView(String fxmlFile) {
         try {
-            Parent newRoot = FXMLLoader.load(getClass().getResource(fxmlFile));
-            FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot);
+            // Get the URL for the resource
+            java.net.URL resourceUrl = getClass().getResource(fxmlFile);
+
+            // Check if the resource was found
+            if (resourceUrl == null) {
+                System.err.println("!!! Critical Error: FXML resource not found at path: " + fxmlFile);
+                System.err.println("!!! Please ensure the file exists in src/main/resources" + fxmlFile);
+                // Optionally show an alert to the user
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("UI Error");
+                    alert.setHeaderText("Cannot Load View");
+                    alert.setContentText("Failed to find the required UI file:\n" + fxmlFile + "\nPlease check application resources.");
+                    alert.showAndWait();
+                });
+                return; // Stop execution if resource is missing
+            }
+
+            // Load the FXML using the found URL
+            Parent newRoot = FXMLLoader.load(resourceUrl);
+
+            // Ensure FXGL scene is ready before modifying it
+            if (FXGL.getSceneService().getCurrentScene() != null && FXGL.getSceneService().getCurrentScene().getRoot() != null) {
+                // Use Platform.runLater just in case, although FXGL usually handles this
+                Platform.runLater(() -> FXGL.getSceneService().getCurrentScene().getRoot().getChildren().setAll(newRoot));
+            } else {
+                System.err.println("Cannot switch view: FXGL scene service or current scene root is null.");
+            }
+
         } catch (IOException e) {
-            System.err.println("Failed to switch view: " + e.getMessage());
+            System.err.println("Failed to load FXML file: " + fxmlFile + " - " + e.getMessage());
+            e.printStackTrace(); // Print stack trace for IO errors
+        } catch (IllegalStateException e) {
+            System.err.println("Error during view switch (likely scene state issue): " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

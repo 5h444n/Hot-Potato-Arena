@@ -2,7 +2,8 @@ package com.demo.game.controllers;
 
 import com.almasb.fxgl.dsl.FXGL;
 import com.demo.game.database.UserDAO;
-import com.demo.game.ui.SceneManager;
+// Import the new utility
+import com.demo.game.utils.PasswordUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -51,7 +52,7 @@ public class RegisterController {
             updatePasswordStrength(newText);
         });
 
-        // Enable register button only when terms are accepted
+        // Enable register button only when terms are checked
         registerButton.disableProperty().bind(termsCheckBox.selectedProperty().not());
     }
 
@@ -62,107 +63,78 @@ public class RegisterController {
         String password = passwordField.getText();
         String confirmPassword = confirmPasswordField.getText();
 
-        // Reset messages
-        errorLabel.setVisible(false);
-        successLabel.setVisible(false);
-
-        // Validation
-        if (!validateInput(username, email, password, confirmPassword)) {
+        // 1. Basic validation
+        if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            showError("All fields are required.");
             return;
         }
 
-        // Attempt registration
-        boolean registered = userDAO.registerUser(username, email, password);
-
-        if (registered) {
-            showSuccess("Registration successful! Redirecting to login...");
-            // Delay before redirecting to log in
-            javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
-                    javafx.util.Duration.seconds(2)
-            );
-            pause.setOnFinished(e -> switchToView("/com/demo/game/fxml/login.fxml"));
-            pause.play();
-        } else {
-            showError("Registration failed. Username or email may already exist.");
-        }
-    }
-
-    private boolean validateInput(String username, String email, String password, String confirmPassword) {
-        // Check empty fields
-        if (username.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-            showError("All fields are required");
-            return false;
-        }
-
-        // Validate username length
-        if (username.length() < 3 || username.length() > 20) {
-            showError("Username must be between 3 and 20 characters");
-            return false;
-        }
-
-        // Validate username format (alphanumeric and underscore only)
-        if (!username.matches("^[a-zA-Z0-9_]+$")) {
-            showError("Username can only contain letters, numbers, and underscores");
-            return false;
-        }
-
-        // Validate email format
-        if (!EMAIL_PATTERN.matcher(email).matches()) {
-            showError("Invalid email format");
-            return false;
-        }
-
-        // Validate password strength
-        if (password.length() < 6) {
-            showError("Password must be at least 6 characters long");
-            return false;
-        }
-
-        // Check password match
         if (!password.equals(confirmPassword)) {
-            showError("Passwords do not match");
-            return false;
+            showError("Passwords do not match.");
+            return;
         }
 
-        return true;
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            showError("Invalid email format.");
+            return;
+        }
+
+        // 2. Use PasswordUtils for validation
+        PasswordUtils.ValidationResult validation = PasswordUtils.validatePassword(password);
+        if (!validation.isValid()) {
+            showError(validation.getMessage());
+            return;
+        }
+
+        // 3. Try to register user
+        try {
+            boolean success = userDAO.registerUser(username, email, password);
+            if (success) {
+                showSuccess("Registration successful! You can now log in.");
+                // Clear fields after success
+                usernameField.clear();
+                emailField.clear();
+                passwordField.clear();
+                confirmPasswordField.clear();
+                termsCheckBox.setSelected(false);
+            } else {
+                showError("Registration failed. Username may already be taken.");
+            }
+        } catch (Exception e) {
+            showError("An error occurred: " + e.getMessage());
+        }
     }
 
+    // This method now only updates the UI, it doesn't perform validation.
     private void updatePasswordStrength(String password) {
-        int strength = calculatePasswordStrength(password);
-        double progress = strength / 4.0;
-        passwordStrengthBar.setProgress(progress);
-
-        // Update color and label based on strength
-        if (strength == 0) {
+        if (password.isEmpty()) {
+            passwordStrengthBar.setProgress(0);
             passwordStrengthLabel.setText("");
-            passwordStrengthBar.setStyle("-fx-accent: #E74C3C;");
-        } else if (strength == 1) {
+            return;
+        }
+
+        // Simple length-based UI feedback
+        double strength = 0;
+        if (password.length() >= 6) strength += 0.25;
+        if (password.matches(".*[A-Z].*")) strength += 0.25;
+        if (password.matches(".*[0-9].*")) strength += 0.25;
+        if (password.matches(".*[!@#$%^&*(),.?\\\":{}|<>].*")) strength += 0.25;
+
+        passwordStrengthBar.setProgress(strength);
+
+        if (strength < 0.5) {
             passwordStrengthLabel.setText("Weak");
             passwordStrengthLabel.setTextFill(Color.RED);
             passwordStrengthBar.setStyle("-fx-accent: #E74C3C;");
-        } else if (strength == 2) {
-            passwordStrengthLabel.setText("Fair");
+        } else if (strength < 0.75) {
+            passwordStrengthLabel.setText("Medium");
             passwordStrengthLabel.setTextFill(Color.ORANGE);
             passwordStrengthBar.setStyle("-fx-accent: #F39C12;");
-        } else if (strength == 3) {
-            passwordStrengthLabel.setText("Good");
-            passwordStrengthLabel.setTextFill(Color.YELLOWGREEN);
-            passwordStrengthBar.setStyle("-fx-accent: #F1C40F;");
         } else {
             passwordStrengthLabel.setText("Strong");
             passwordStrengthLabel.setTextFill(Color.GREEN);
             passwordStrengthBar.setStyle("-fx-accent: #27AE60;");
         }
-    }
-
-    private int calculatePasswordStrength(String password) {
-        int strength = 0;
-        if (password.length() >= 6) strength++;
-        if (password.length() >= 10) strength++;
-        if (password.matches(".*[A-Z].*")) strength++; // Has uppercase
-        if (password.matches(".*[0-9].*")) strength++; // Has number
-        if (password.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) strength++; // Has special char
-        return Math.min(strength, 4);
     }
 
     @FXML

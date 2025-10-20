@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="25" height="19" tilewidth="32" tileheight="32" infinite="0" nextlayerid="3" nextobjectid="9">
+ <layer id="1" name="Tile Layer 1" width="25" height="19">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="2" name="objects">
+  <object id="1" x="0" y="0" width="32" height="600">
+   <properties>
+    <property name="height" value="float"/>
+    <property name="type" value="wall"/>
+    <property name="width" value="float"/>
+   </properties>
+  </object>
+  <object id="2" x="32" y="0" width="768" height="32">
+   <properties>
+    <property name="height" value="float"/>
+    <property name="type" value="wall"/>
+    <property name="width" value="float"/>
+   </properties>
+  </object>
+  <object id="3" x="32" y="568" width="768" height="32">
+   <properties>
+    <property name="height" value="float"/>
+    <property name="type" value="wall"/>
+    <property name="width" value="float"/>
+   </properties>
+  </object>
+  <object id="4" x="768" y="32" width="32" height="536">
+   <properties>
+    <property name="height" value="float"/>
+    <property name="type" value="wall"/>
+    <property name="width" value="float"/>
+   </properties>
+  </object>
+  <object id="5" x="331.815" y="331.815" width="40" height="40">
+   <properties>
+    <property name="type" value="player"/>
+   </properties>
+  </object>
+  <object id="6" x="367.007" y="301.65" width="20" height="20">
+   <properties>
+    <property name="type" value="bomb"/>
+   </properties>
+  </object>
+  <object id="7" x="457.502" y="201.1" width="40" height="40">
+   <properties>
+    <property name="type" value="ai"/>
+   </properties>
+  </object>
+  <object id="8" x="-399.686" y="-72.8987"/>
+ </objectgroup>
+</map>

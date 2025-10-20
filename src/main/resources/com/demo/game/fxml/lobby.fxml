@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.demo.game.controllers.LobbyController"
+      alignment="CENTER" spacing="20" prefHeight="600" prefWidth="800"
+      stylesheets="@../css/style.css">
+
+    <padding>
+        <Insets top="50" right="100" bottom="50" left="100"/>
+    </padding>
+
+    <Label text="Game Lobby" styleClass="label-title" />
+    <Label text="Players in lobby:" styleClass="label-header" />
+
+    <ListView fx:id="playerListView" VBox.vgrow="ALWAYS" />
+
+    <Button fx:id="startGameButton" text="Start Game" onAction="#handleStartGame" visible="false" />
+    <Button text="Disconnect" onAction="#handleDisconnect" styleClass="button-back" />
+</VBox>

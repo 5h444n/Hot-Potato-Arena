@@ -31,7 +31,7 @@ public class PlayerComponent extends Component {
 
     @Override
     public void onAdded() {
-        // POLISHED: Initialize physics component here to prevent NullPointerException
+        // Initialize physics component here to prevent NullPointerException
         physicsComponent = entity.getComponent(PhysicsComponent.class);
         passCoolDownTimer = FXGL.newLocalTimer();
         passCoolDownTimer.capture();
@@ -44,39 +44,59 @@ public class PlayerComponent extends Component {
 
     public void moveRight() {
         physicsComponent.setVelocityX(Config.PLAYER_SPEED);
-        lastDirection = new Point2D(1, 0); // Update facing direction
+        lastDirection = new Point2D(1, 0);
     }
 
     public void moveUp() {
         physicsComponent.setVelocityY(-Config.PLAYER_SPEED);
-        lastDirection = new Point2D(0, -1); // Update facing direction
+        lastDirection = new Point2D(0, -1);
     }
 
     public void moveDown() {
         physicsComponent.setVelocityY(Config.PLAYER_SPEED);
-        lastDirection = new Point2D(0, 1); // Update facing direction
+        lastDirection = new Point2D(0, 1);
     }
 
+    // --- FIX: Methods to STOP movement when key is released ---
     public void stopMovingX() {
-        physicsComponent.setVelocityX(0);
+        // Only stop if we are currently moving horizontally
+        if (physicsComponent.getVelocityX() != 0) {
+            physicsComponent.setVelocityX(0);
+        }
     }
 
     public void stopMovingY() {
-        physicsComponent.setVelocityY(0);
+        // Only stop if we are currently moving vertically
+        if (physicsComponent.getVelocityY() != 0) {
+            physicsComponent.setVelocityY(0);
+        }
     }
 
+    /**
+     * Called when the player receives the bomb (e.g., from an AI pass or game start).
+     * @param bomb The bomb Entity being received.
+     */
     public void receiveBomb(Entity bomb) {
-        this.hasBomb = true;
-        this.bombEntity = bomb;
-        bomb.getComponent(BombComponent.class).startTimer();
-        passCoolDownTimer.capture();
+        if (!hasBomb) {
+            this.bombEntity = bomb; // Keep track of the bomb entity
+            this.hasBomb = true;
 
-        // Attach bomb to player
-        bomb.setPosition(entity.getCenter().subtract(bomb.getWidth() / 2, bomb.getHeight() / 2));
-        bomb.xProperty().bind(entity.xProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
-        bomb.yProperty().bind(entity.yProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
+            // Start the bomb timer
+            bomb.getComponent(BombComponent.class).startTimer();
+
+            // Bind the bomb's position to the player's position
+            // This makes the bomb move with the player
+            bomb.xProperty().bind(entity.xProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
+            bomb.yProperty().bind(entity.yProperty().add(Config.PLAYER_SIZE / 2.0 - Config.BOMB_SIZE / 2.0));
+
+            // Reset the pass cooldown timer
+            passCoolDownTimer.capture();
+        }
     }
+    // -----------------------------------------------------------
 
+
+    // --- FIX: The missing passBomb() method ---
     public void passBomb() {
         if (hasBomb && passCoolDownTimer.elapsed(PASS_COOLDOWN)) {
             // Find the closest AI that is within passing range
@@ -86,7 +106,10 @@ public class PlayerComponent extends Component {
                         if (entity.distance(closestAI) <= Config.PASS_RANGE) {
                             // Transfer the bomb
                             this.hasBomb = false;
+                            // Unbind the bomb from the player's position properties
                             bombEntity.xProperty().unbind();
+                            bombEntity.yProperty().unbind();
+
 
                             // Give bomb to the closest AI
                             closestAI.getComponent(AIComponent.class).receiveBomb(bombEntity);
@@ -97,21 +120,30 @@ public class PlayerComponent extends Component {
                     });
         }
     }
+    // ------------------------------------------
 
     public void eliminate() {
         this.hasBomb = false;
         this.bombEntity = null;
         entity.getViewComponent().setVisible(false); // Hide player
-        entity.getComponent(PhysicsComponent.class).overwritePosition(new Vec2(-100, -100).toPoint2D()); // Move off-screen
+        // Move off-screen
+        entity.getComponent(PhysicsComponent.class).overwritePosition(new Vec2(-100, -100).toPoint2D());
     }
 
+    // --- FIX: Corrected respawn method to prevent crash ---
     public void respawn() {
         entity.getViewComponent().setVisible(true);
-        entity.getComponent(PhysicsComponent.class).overwritePosition(
-                new Vec2(
-                        Config.SCREEN_WIDTH / 2.0,
-                        Config.SCREEN_HEIGHT / 2.0
-                ).toPoint2D()
-        );
+
+        // Calculate center point and subtract half the player size to get the top-left corner position
+        double respawnX = Config.SCREEN_WIDTH / 2.0 - Config.PLAYER_SIZE / 2.0;
+        double respawnY = Config.SCREEN_HEIGHT / 2.0 - Config.PLAYER_SIZE / 2.0;
+
+        // Use setPosition() which is safer than overwritePosition() during entity lifecycle
+        entity.setPosition(respawnX, respawnY);
+
+        // Also ensure the physics velocity is reset
+        physicsComponent.setVelocityX(0);
+        physicsComponent.setVelocityY(0);
     }
+    // ------------------------------------------------------
 }

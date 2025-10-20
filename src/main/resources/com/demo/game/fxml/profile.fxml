@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.demo.game.controllers.ProfileController"
+      alignment="CENTER" spacing="15" prefHeight="600" prefWidth="800"
+      stylesheets="@../css/style.css">
+
+    <padding>
+        <Insets top="50" right="150" bottom="50" left="150"/>
+    </padding>
+
+    <Label text="My Profile" styleClass="label-title" />
+    <Label fx:id="errorLabel" styleClass="label-error" managed="false" />
+    <Label fx:id="successLabel" styleClass="label-success" managed="false" />
+
+    <ImageView fx:id="profileImageView" fitHeight="100" fitWidth="100">
+        <clip>
+            <Circle radius="50" centerX="50" centerY="50" />
+        </clip>
+    </ImageView>
+    <Button text="Upload Photo" onAction="#handleUploadPhoto" maxWidth="200" />
+
+    <VBox spacing="10" maxWidth="350">
+        <Label text="Username:" styleClass="label-regular" />
+        <TextField fx:id="usernameField" />
+
+        <Label text="New Password:" styleClass="label-regular" />
+        <PasswordField fx:id="passwordField" promptText="Leave blank to keep current" />
+
+        <Label text="Confirm New Password:" styleClass="label-regular" />
+        <PasswordField fx:id="confirmPasswordField" promptText="Confirm new password" />
+
+        <Label text="Current Password (Required to change password):" styleClass="label-regular" />
+        <PasswordField fx:id="currentPasswordField" promptText="Enter current password" />
+    </VBox>
+
+    <Button text="Update Profile" onAction="#handleUpdateProfile" />
+    <Button text="Back to Main Menu" onAction="#handleBack" styleClass="button-back" />
+</VBox>
