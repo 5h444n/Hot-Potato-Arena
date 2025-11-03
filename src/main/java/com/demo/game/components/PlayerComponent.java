@@ -93,7 +93,6 @@ public class PlayerComponent extends Component {
             passCoolDownTimer.capture();
         }
     }
-    // -----------------------------------------------------------
 
 
     // --- FIX: The missing passBomb() method ---
@@ -120,30 +119,23 @@ public class PlayerComponent extends Component {
                     });
         }
     }
-    // ------------------------------------------
 
     public void eliminate() {
         this.hasBomb = false;
         this.bombEntity = null;
-        entity.getViewComponent().setVisible(false); // Hide player
-        // Move off-screen
+        entity.getViewComponent().setVisible(false);
         entity.getComponent(PhysicsComponent.class).overwritePosition(new Vec2(-100, -100).toPoint2D());
     }
 
-    // --- FIX: Corrected respawn method to prevent crash ---
     public void respawn() {
         entity.getViewComponent().setVisible(true);
 
-        // Calculate center point and subtract half the player size to get the top-left corner position
         double respawnX = Config.SCREEN_WIDTH / 2.0 - Config.PLAYER_SIZE / 2.0;
         double respawnY = Config.SCREEN_HEIGHT / 2.0 - Config.PLAYER_SIZE / 2.0;
 
-        // Use setPosition() which is safer than overwritePosition() during entity lifecycle
         entity.setPosition(respawnX, respawnY);
 
-        // Also ensure the physics velocity is reset
         physicsComponent.setVelocityX(0);
         physicsComponent.setVelocityY(0);
     }
-    // ------------------------------------------------------
 }

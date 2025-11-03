@@ -51,9 +51,7 @@ public class GameApp extends GameApplication {
     private User currentUser;
 
     // --- Entity Properties ---
-    /** The FXGL entity representing the locally controlled player (only used in Single Player). */
     private Entity playerEntity;
-    /** The component managing the locally controlled player's state (only used in Single Player). */
     private PlayerComponent playerComponent;
 
     // --- Multiplayer Client Properties ---
@@ -65,7 +63,7 @@ public class GameApp extends GameApplication {
 
     // --- Interpolation ---
     private Map<Integer, Point2D> targetPositions = new HashMap<>();
-    private static final double INTERPOLATION_FACTOR = 0.3;
+    private static final double INTERPOLATION_FACTOR = 0.7;
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -127,23 +125,37 @@ public class GameApp extends GameApplication {
         }
     }
 
-    // =================================================================
-    //                   SINGLE PLAYER LOGIC
-    // =================================================================
+    // SINGLE PLAYER LOGIC
 
     private void initSinglePlayer() {
+        // --- FIX ---
+        // Spawn walls once at the very beginning of single-player mode.
+        spawnWalls();
+
         loadSinglePlayerArena();
         FXGL.getEventBus().addEventHandler(BombExplodedEvent.ANY, this::onSinglePlayerBombExploded);
     }
 
     private void loadSinglePlayerArena() {
-        spawnWalls();
+        // --- FIX ---
+        // Clear all dynamic entities from the previous level/round before loading the new one.
+        // This prevents duplicate players and AI.
+        FXGL.getGameWorld().getEntitiesByType(EntityType.PLAYER, EntityType.AI, EntityType.BOMB, EntityType.PORTAL).forEach(Entity::removeFromWorld);
+
+        // --- FIX ---
+        // spawnWalls() was moved to initSinglePlayer()
+
         playerEntity = FXGL.spawn("player", new SpawnData(SCREEN_WIDTH / 2.0 - PLAYER_SIZE, SCREEN_HEIGHT / 2.0).put("username", currentUser.getUsername()));
-        playerComponent = playerEntity.getComponent(PlayerComponent.class);
+        playerComponent = playerEntity.getComponent(PlayerComponent.class); // This field is still needed for input
 
         int level = FXGL.getip("level").get();
         double aiSpeed = AI_SPEEDS.get(Math.min(level - 1, AI_SPEEDS.size() - 1));
-        for (int i = 0; i < level; i++) {
+
+        // --- FIX ---
+        // Spawn the correct number of AIs based on your requirement (L1=3, L2=4, L3=5)
+        int numAIs = level + 2;
+
+        for (int i = 0; i < numAIs; i++) { // Use numAIs instead of level
             FXGL.spawn("ai", new SpawnData(100 + i * 80, 100).put("speed", aiSpeed));
         }
 
@@ -152,11 +164,29 @@ public class GameApp extends GameApplication {
         portal1.getComponent(PortalComponent.class).setTarget(portal2);
         portal2.getComponent(PortalComponent.class).setTarget(portal1);
 
-        startNewRound();
+        // --- FIX ---
+        // Pass the newly created player entity to startNewRound
+        startNewRound(playerEntity);
     }
 
-    private void startNewRound() {
-        playerComponent.respawn();
+    // --- FIX ---
+    // Modified to accept the entity that needs respawning.
+    // Pass null if no entity is being respawned (like when an AI is eliminated).
+    private void startNewRound(Entity entityToRespawn) {
+
+        // --- FIX ---
+        // Only respawn the entity if it's not null and is the player
+        if (entityToRespawn != null && entityToRespawn.isType(EntityType.PLAYER)) {
+            // Use the component from the *passed-in* entity
+            entityToRespawn.getComponent(PlayerComponent.class).respawn();
+        } else if (playerEntity != null && playerEntity.isActive()) {
+            // If the AI was eliminated, the player doesn't need to respawn,
+            // but we still need to make sure the playerComponent field is valid for input
+            // and the player is in the correct start position.
+            // This also handles the case from loadSinglePlayerArena.
+            playerEntity.getComponent(PlayerComponent.class).respawn();
+        }
+
         List<Entity> ais = FXGL.getGameWorld().getEntitiesByType(EntityType.AI);
         for (int i = 0; i < ais.size(); i++) {
             ais.get(i).getComponent(PhysicsComponent.class).overwritePosition(
@@ -164,13 +194,17 @@ public class GameApp extends GameApplication {
             );
         }
 
+        // --- FIX ---
+        // Ensure the old bomb is gone before spawning a new one
+        FXGL.getGameWorld().getSingletonOptional(EntityType.BOMB).ifPresent(Entity::removeFromWorld);
+
         Entity bomb = FXGL.spawn("bomb", -100, -100);
         List<Entity> characters = new ArrayList<>(ais);
-        characters.add(playerEntity);
+        characters.add(playerEntity); // playerEntity field is still correct
         Entity holder = characters.get(FXGL.random(0, characters.size() - 1));
 
         if (holder.isType(EntityType.PLAYER)) {
-            playerComponent.receiveBomb(bomb);
+            playerComponent.receiveBomb(bomb); // playerComponent field is still correct
         } else {
             holder.getComponent(AIComponent.class).receiveBomb(bomb);
         }
@@ -179,7 +213,8 @@ public class GameApp extends GameApplication {
     private void onSinglePlayerBombExploded(BombExplodedEvent event) {
         Entity eliminated = event.getEliminatedEntity();
         if (eliminated == null) {
-            startNewRound();
+            // --- FIX --- Pass null, since no one was eliminated
+            startNewRound(null);
             return;
         }
 
@@ -188,7 +223,9 @@ public class GameApp extends GameApplication {
             if (FXGL.getip("lives").get() <= 0) {
                 endGame(false);
             } else {
-                startNewRound();
+                // --- FIX ---
+                // Pass the eliminated player entity to be respawned
+                startNewRound(eliminated);
             }
         } else if (eliminated.isType(EntityType.AI)) {
             eliminated.removeFromWorld();
@@ -196,7 +233,9 @@ public class GameApp extends GameApplication {
             if (FXGL.getGameWorld().getEntitiesByType(EntityType.AI).isEmpty()) {
                 nextLevel();
             } else {
-                startNewRound();
+                // --- FIX ---
+                // Pass null, as the player doesn't need to respawn
+                startNewRound(null);
             }
         }
     }
@@ -209,6 +248,8 @@ public class GameApp extends GameApplication {
             FXGL.inc("level", 1);
             FXGL.inc("lives", 1);
             FXGL.getNotificationService().pushNotification("Level " + FXGL.getip("level") + "!");
+            // This call is what caused the duplicate player bug, which is now fixed
+            // by the cleanup code at the start of loadSinglePlayerArena()
             loadSinglePlayerArena();
         }
     }
@@ -596,4 +637,3 @@ public class GameApp extends GameApplication {
         }
     }
 }
-

@@ -94,7 +94,7 @@ public class CreditsController {
 
     @FXML
     private void handleWebsite() {
-        openWebpage("https://www.yourwebsite.com");
+        openWebpage("https://www.hot-potato.com");
     }
 
     private void openWebpage(String url) {
